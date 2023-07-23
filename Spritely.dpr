@@ -14,7 +14,8 @@ program Spritely;
 uses
   System.StartUpCopy,
   FMX.Forms,
-  MainGui in 'MainGui.pas' {Form1};
+  MainGui in 'MainGui.pas' {Form1},
+  CastleApp in 'CastleApp.pas';
 
 {$R *.res}
 

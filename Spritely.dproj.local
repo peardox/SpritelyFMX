@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2023/05/18 14:38:55.000.406,=C:\Users\simon\Documents\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
+    <Transaction>2023/05/24 14:13:43.000.143,=C:\Users\simon\Documents\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
+    <Transaction>2023/05/24 14:14:39.000.879,C:\work\cge\CGEFormTest\FMX\Unit2.fmx=C:\Users\simon\Documents\Embarcadero\Studio\Projects\Unit2.fmx</Transaction>
+    <Transaction>2023/05/24 14:14:39.000.879,C:\work\cge\CGEFormTest\FMX\Unit2.pas=C:\Users\simon\Documents\Embarcadero\Studio\Projects\Unit2.pas</Transaction>
+    <Transaction>2023/05/24 14:14:53.000.491,C:\work\cge\CGEFormTest\FMX\FMXTest.dproj=C:\Users\simon\Documents\Embarcadero\Studio\Projects\Project2.dproj</Transaction>
+    <Transaction>2023/05/24 14:15:07.000.636,C:\work\cge\CGEFormTest\FMX\Unit1.pas=C:\work\cge\CGEFormTest\FMX\Unit2.pas</Transaction>
+    <Transaction>2023/05/24 14:15:07.000.636,C:\work\cge\CGEFormTest\FMX\Unit1.fmx=C:\work\cge\CGEFormTest\FMX\Unit2.fmx</Transaction>
+    <Transaction>2023/07/21 09:43:55.000.237,C:\src\CGEFormTest\FMX\FMXTest.dproj=C:\git\SpritelyFMX\Spritely.dproj</Transaction>
+    <Transaction>2023/07/21 09:44:57.000.883,C:\src\CGEFormTest\FMX\Unit1.pas=C:\git\SpritelyFMX\MainGui.pas</Transaction>
+    <Transaction>2023/07/21 09:44:57.000.883,C:\src\CGEFormTest\FMX\Unit1.fmx=C:\git\SpritelyFMX\MainGui.fmx</Transaction>
+  </Transactions>
+</BorlandProject>

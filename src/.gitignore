@@ -64,11 +64,4 @@ __recovery/
 
 # Directory Specific
 
-Styles/Sterling.Win.style
-*.stat
-modules/
-Win32/
-Win64/
-Linux64/
-data/KayKit/
-data/Kenney/
+

@@ -1,25 +1,19 @@
 program Spritely;
 
-  {$warn COMPARING_SIGNED_UNSIGNED off}
-  {$warn COMBINING_SIGNED_UNSIGNED off}
-  {$warn COMBINING_SIGNED_UNSIGNED64 off}
-  {$warn IMPLICIT_STRING_CAST off}
-  {$warn IMPLICIT_STRING_CAST_LOSS off}
-  {$warn GARBAGE off}
-  {$warn WIDECHAR_REDUCED off}
-  {$warn SYMBOL_DEPRECATED off}
-  {$warn DUPLICATE_CTOR_DTOR off}
-  {$warn PRIVATE_PROPACCESSOR off}
-
 uses
   System.StartUpCopy,
   FMX.Forms,
-  MainGui in 'MainGui.pas' {Form1},
-  CastleApp in 'CastleApp.pas';
+  MainGui in 'src\MainGui.pas' {Form1},
+  CastleApp in 'src\CastleApp.pas',
+  SpritelySettings in 'src\SpritelySettings.pas',
+  SpritelyTypes in 'src\SpritelyTypes.pas',
+  CastleModel in 'src\CastleModel.pas',
+  CastleHelpers in 'src\CastleHelpers.pas';
 
 {$R *.res}
 
 begin
+  ReportMemoryLeaksOnShutdown := True;
   Application.Initialize;
   Application.CreateForm(TForm1, Form1);
   Application.Run;

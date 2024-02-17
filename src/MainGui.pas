@@ -36,10 +36,13 @@ type
     procedure Layout4Resize(Sender: TObject);
     procedure MenuItem2Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
+    procedure LayoutViewMouseWheel(Sender: TObject; Shift: TShiftState;
+      WheelDelta: Integer; var Handled: Boolean);
   private
     { Private declarations }
     CastleControl: TCastleControl;
     CastleApp: TCastleApp;
+    procedure LogTicker(Sender: TObject; const Msg: String);
   public
     { Public declarations }
   end;
@@ -56,20 +59,14 @@ uses
 {$R *.fmx}
 
 procedure TForm1.Button1Click(Sender: TObject);
-var
-  i: Integer;
 begin
   with CastleApp do
     begin
       if Models.Kids.Count > 1 then
         begin
-          for I := 0 to Models.Kids.Count - 1 do
-            Models.Kids[i].Normalize;
-          Models.Kids[1].Translation := Models.Kids[1].Translation  + Vector3(1,0,0);
+          Models.Kids[1].Gimbal.Translation := Vector3(1,0,0);
         end;
-
     end;
-
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
@@ -78,6 +75,7 @@ begin
   CastleControl.Align := TAlignLayout.Client;
   CastleControl.Parent := LayoutView;
   CastleApp := TCastleApp.Create(CastleControl);
+  CastleApp.OnExtMessage := LogTicker;
   CastleControl.Container.View := CastleApp;
   SwitchView;
 
@@ -92,6 +90,25 @@ begin
   Memo1.Width := LayoutLeft.Width;
   Button1.Position.X := (Memo1.Width - Button1.Width) / 2;
   Button1.Position.Y := Memo1.Height;
+end;
+
+procedure TForm1.LayoutViewMouseWheel(Sender: TObject; Shift: TShiftState;
+  WheelDelta: Integer; var Handled: Boolean);
+var
+  factor: Integer;
+begin
+  factor := 1;
+
+  if WheelDelta < 0 then
+    CastleApp.ZoomOut(factor);
+  if WheelDelta > 0 then
+    CastleApp.ZoomIn(factor);
+end;
+
+procedure TForm1.LogTicker(Sender: TObject; const Msg: String);
+begin
+  Memo1.Lines.Clear;
+  Memo1.Lines.Add(Msg);
 end;
 
 procedure TForm1.MenuItem2Click(Sender: TObject);

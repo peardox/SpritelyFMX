@@ -8,7 +8,12 @@ uses
   SpritelySettings in 'src\SpritelySettings.pas',
   SpritelyTypes in 'src\SpritelyTypes.pas',
   CastleModel in 'src\CastleModel.pas',
-  CastleHelpers in 'src\CastleHelpers.pas';
+  CastleHelpers in 'src\CastleHelpers.pas',
+  UIPieces in 'src\UIPieces.pas',
+  SpritelyControls in 'src\SpritelyControls.pas',
+  SpritelyDebug in 'src\SpritelyDebug.pas',
+  SphericalCamera in 'src\SphericalCamera.pas',
+  SpritelyCheckTextures in 'src\SpritelyCheckTextures.pas';
 
 {$R *.res}
 

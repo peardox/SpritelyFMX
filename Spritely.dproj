@@ -285,6 +285,11 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <DCCReference Include="src\SpritelyTypes.pas"/>
         <DCCReference Include="src\CastleModel.pas"/>
         <DCCReference Include="src\CastleHelpers.pas"/>
+        <DCCReference Include="src\UIPieces.pas"/>
+        <DCCReference Include="src\SpritelyControls.pas"/>
+        <DCCReference Include="src\SpritelyDebug.pas"/>
+        <DCCReference Include="src\SphericalCamera.pas"/>
+        <DCCReference Include="src\SpritelyCheckTextures.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -329,9 +334,22 @@ $(PostBuildEvent)]]></PostBuildEvent>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="Linux64\Debug\Spritely" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Linux64">
+                        <RemoteName>Spritely</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="Linux64\Release\Spritely" Configuration="Release" Class="ProjectOutput">
                     <Platform Name="Linux64">
                         <RemoteName>Spritely</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="Styles\MaterialOxfordBlue_Linux.style" Configuration="Debug" Class="File">
+                    <Platform Name="Linux64">
+                        <RemoteDir>.\Styles</RemoteDir>
+                        <RemoteName>MaterialOxfordBlue_Linux.style</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -350,6 +368,13 @@ $(PostBuildEvent)]]></PostBuildEvent>
                 <DeployFile LocalName="Win64\Release\Spritely.exe" Configuration="Release" Class="ProjectOutput">
                     <Platform Name="Win64">
                         <RemoteName>Spritely.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="data\oblique.glb" Configuration="Debug" Class="File">
+                    <Platform Name="Linux64">
+                        <RemoteDir>.\data</RemoteDir>
+                        <RemoteName>oblique.glb</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

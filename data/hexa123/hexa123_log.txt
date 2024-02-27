@@ -1,0 +1,20 @@
+Nodes:
+======
+0: Cube:
+    * Mesh 0 [V,N,UV,T,]
+    * Mesh 1 [V,N,UV,T,]
+    * Mesh 2 [V,N,UV,T,]
+    * Mesh 3 [V,N,UV,T,]
+    * Mesh 4 [V,N,UV,T,]
+    * Mesh 5 [V,N,UV,T,]
+
+
+Materials:
+==========
+0: MaterialTop
+1: MaterialFront
+2: MaterialLeft
+3: MaterialBottom
+4: MaterialRight
+5: MaterialBack
+

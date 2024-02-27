@@ -2,13 +2,14 @@ object Form1: TForm1
   Left = 0
   Top = 0
   Caption = 'FMXTest'
-  ClientHeight = 768
+  ClientHeight = 800
   ClientWidth = 1280
   StyleBook = StyleBook1
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
   OnCreate = FormCreate
+  OnKeyDown = FormKeyDown
   DesignerMasterStyle = 0
   object StyleBook1: TStyleBook
     Styles = <
@@ -20,19 +21,28 @@ object Form1: TForm1
   object LayoutTop: TLayout
     Align = Top
     Size.Width = 1280.000000000000000000
-    Size.Height = 50.000000000000000000
+    Size.Height = 8.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 3
+    TabStop = False
   end
   object MainMenu1: TMainMenu
     Left = 448
     Top = 416
     object MenuItem1: TMenuItem
       Text = 'File'
-      object MenuItem2: TMenuItem
+      object mnuLoad: TMenuItem
         Locked = True
         Text = 'Load'
-        OnClick = MenuItem2Click
+        OnClick = mnuLoadClick
+      end
+    end
+    object MenuItem3: TMenuItem
+      Text = 'Utilities'
+      object mnuCheckGLTF: TMenuItem
+        Locked = True
+        Text = 'Check GLTFs'
+        OnClick = mnuCheckGLTFClick
       end
     end
   end
@@ -41,54 +51,67 @@ object Form1: TForm1
     Top = 416
   end
   object StatusBar1: TStatusBar
-    Position.Y = 746.000000000000000000
+    Position.Y = 778.000000000000000000
     ShowSizeGrip = True
     Size.Width = 1280.000000000000000000
     Size.Height = 22.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 1
+    TabStop = False
   end
   object TabControl1: TTabControl
     Align = Client
     Size.Width = 1280.000000000000000000
-    Size.Height = 696.000000000000000000
+    Size.Height = 770.000000000000000000
     Size.PlatformDefault = False
     TabIndex = 0
     TabOrder = 0
+    TabStop = False
     TabPosition = PlatformDefault
     Sizes = (
       1280s
-      670s
+      744s
       1280s
-      670s)
-    object TabItem1: TTabItem
+      744s)
+    object TabProject: TTabItem
       CustomIcon = <
         item
         end>
       TextSettings.Trimming = None
       IsSelected = True
-      Size.Width = 69.000000000000000000
+      Size.Width = 57.000000000000000000
       Size.Height = 26.000000000000000000
       Size.PlatformDefault = False
       StyleLookup = ''
       TabOrder = 0
-      Text = 'TabItem1'
+      TabStop = False
+      Text = 'Project'
       ExplicitSize.cx = 69.000000000000000000
       ExplicitSize.cy = 26.000000000000000000
       object LayoutView: TLayout
         Align = Client
-        Size.Width = 880.000000000000000000
-        Size.Height = 670.000000000000000000
+        Size.Width = 800.000000000000000000
+        Size.Height = 744.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 2
+        TabStop = False
+        OnResize = LayoutViewResize
         OnMouseWheel = LayoutViewMouseWheel
+        object View3D: TLayout
+          Size.Width = 800.000000000000000000
+          Size.Height = 744.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 0
+          TabStop = False
+        end
       end
       object LayoutLeft: TLayout
         Align = Left
-        Size.Width = 200.000000000000000000
-        Size.Height = 670.000000000000000000
+        Size.Width = 240.000000000000000000
+        Size.Height = 744.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 6
+        TabStop = False
         OnResize = LayoutLeftResize
         object Button1: TButton
           Position.Y = 361.000000000000000000
@@ -96,6 +119,7 @@ object Form1: TForm1
           Size.Height = 22.000000000000000000
           Size.PlatformDefault = False
           TabOrder = 0
+          TabStop = False
           Text = 'Button1'
           TextSettings.Trimming = None
           OnClick = Button1Click
@@ -103,57 +127,202 @@ object Form1: TForm1
         object Memo1: TMemo
           Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
           DataDetectorTypes = []
+          StyledSettings = [Size, Style, FontColor]
+          TextSettings.Font.Family = 'Noto Mono'
           Align = Top
-          Size.Width = 200.000000000000000000
+          Size.Width = 240.000000000000000000
           Size.Height = 361.000000000000000000
           Size.PlatformDefault = False
           TabOrder = 1
-          Viewport.Width = 196.000000000000000000
+          TabStop = False
+          Viewport.Width = 236.000000000000000000
           Viewport.Height = 357.000000000000000000
         end
       end
       object Layout4: TLayout
         Align = Right
-        Position.X = 1080.000000000000000000
-        Size.Width = 200.000000000000000000
-        Size.Height = 670.000000000000000000
+        Position.X = 1040.000000000000000000
+        Size.Width = 240.000000000000000000
+        Size.Height = 744.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 10
+        TabStop = False
         OnResize = Layout4Resize
-        object Switch3D: TSwitch
-          IsChecked = False
-          Position.X = 34.000000000000000000
-          Position.Y = 8.000000000000000000
-          TabOrder = 0
-          OnClick = Switch3DClick
-        end
-        object Label3D: TLabel
-          AutoSize = True
-          Position.X = 8.000000000000000000
-          Position.Y = 8.000000000000000000
-          Size.Width = 25.000000000000000000
-          Size.Height = 16.000000000000000000
+        object TabControl2: TTabControl
+          Align = Client
+          HitTest = False
+          Size.Width = 240.000000000000000000
+          Size.Height = 704.000000000000000000
           Size.PlatformDefault = False
-          TextSettings.HorzAlign = Center
-          TextSettings.VertAlign = Leading
-          TextSettings.Trimming = None
-          Text = '3D'
+          TabIndex = 1
           TabOrder = 1
+          TabStop = False
+          TabPosition = Bottom
+          Sizes = (
+            240s
+            678s
+            240s
+            678s)
+          object TabModel: TTabItem
+            CustomIcon = <
+              item
+              end>
+            TextSettings.Trimming = None
+            IsSelected = False
+            Size.Width = 55.000000000000000000
+            Size.Height = 26.000000000000000000
+            Size.PlatformDefault = False
+            StyleLookup = ''
+            TabOrder = 0
+            TabStop = False
+            Text = 'Model'
+            OnClick = TabModelClick
+            ExplicitSize.cx = 55.000000000000000000
+            ExplicitSize.cy = 26.000000000000000000
+            object StringGrid1: TStringGrid
+              Align = Bottom
+              CanFocus = True
+              ClipChildren = True
+              Position.Y = 328.000000000000000000
+              Size.Width = 240.000000000000000000
+              Size.Height = 350.000000000000000000
+              Size.PlatformDefault = False
+              TabOrder = 0
+              RowCount = 11
+              Viewport.Width = 236.000000000000000000
+              Viewport.Height = 325.000000000000000000
+              object StringColumn1: TStringColumn
+                Header = 'Property'
+              end
+              object StringColumn2: TStringColumn
+                HorzAlign = Trailing
+                Header = 'Value'
+              end
+            end
+            object ModelRotationLayout: TLayout
+              Align = Top
+              Padding.Left = 1.000000000000000000
+              Padding.Top = 1.000000000000000000
+              Padding.Right = 1.000000000000000000
+              Padding.Bottom = 1.000000000000000000
+              Margins.Left = 2.000000000000000000
+              Margins.Top = 2.000000000000000000
+              Margins.Right = 2.000000000000000000
+              Margins.Bottom = 2.000000000000000000
+              Position.X = 2.000000000000000000
+              Position.Y = 2.000000000000000000
+              Size.Width = 236.000000000000000000
+              Size.Height = 257.000000000000000000
+              Size.PlatformDefault = False
+              TabOrder = 1
+            end
+            object CheckBox1: TCheckBox
+              Align = Bottom
+              Position.Y = 309.000000000000000000
+              Size.Width = 240.000000000000000000
+              Size.Height = 19.000000000000000000
+              Size.PlatformDefault = False
+              TabOrder = 2
+              Text = 'Show Debug Box'
+              OnChange = CheckBox1Change
+            end
+          end
+          object TabCamera: TTabItem
+            CustomIcon = <
+              item
+              end>
+            TextSettings.Trimming = None
+            IsSelected = True
+            Size.Width = 61.000000000000000000
+            Size.Height = 26.000000000000000000
+            Size.PlatformDefault = False
+            StyleLookup = ''
+            TabOrder = 0
+            TabStop = False
+            Text = 'Camera'
+            OnClick = TabCameraClick
+            ExplicitSize.cx = 61.000000000000000000
+            ExplicitSize.cy = 26.000000000000000000
+            object CameraRotationLayout: TLayout
+              Align = Top
+              Size.Width = 240.000000000000000000
+              Size.Height = 257.000000000000000000
+              Size.PlatformDefault = False
+              TabOrder = 1
+            end
+            object CameraInclinationLayout: TLayout
+              Align = Top
+              Position.Y = 257.000000000000000000
+              Size.Width = 240.000000000000000000
+              Size.Height = 240.000000000000000000
+              Size.PlatformDefault = False
+              TabOrder = 2
+              TabStop = False
+            end
+            object StringGrid2: TStringGrid
+              Align = Client
+              CanFocus = True
+              ClipChildren = True
+              Size.Width = 240.000000000000000000
+              Size.Height = 181.000000000000000000
+              Size.PlatformDefault = False
+              TabOrder = 0
+              RowCount = 11
+              Viewport.Width = 220.000000000000000000
+              Viewport.Height = 156.000000000000000000
+              object StringColumn3: TStringColumn
+                Header = 'Property'
+              end
+              object StringColumn4: TStringColumn
+                HorzAlign = Trailing
+                Header = 'Value'
+              end
+            end
+          end
+        end
+        object Layout2D3D: TLayout
+          Align = Top
+          Size.Width = 240.000000000000000000
+          Size.Height = 40.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 0
+          object Label3D: TLabel
+            AutoSize = True
+            Position.X = 8.000000000000000000
+            Position.Y = 8.000000000000000000
+            Size.Width = 25.000000000000000000
+            Size.Height = 16.000000000000000000
+            Size.PlatformDefault = False
+            TextSettings.HorzAlign = Center
+            TextSettings.VertAlign = Leading
+            TextSettings.Trimming = None
+            Text = '3D'
+            TabOrder = 1
+          end
+          object Switch3D: TSwitch
+            IsChecked = False
+            Position.X = 34.000000000000000000
+            Position.Y = 8.000000000000000000
+            TabOrder = 0
+            TabStop = False
+            OnClick = Switch3DClick
+          end
         end
       end
     end
-    object TabItem2: TTabItem
+    object TabOutput: TTabItem
       CustomIcon = <
         item
         end>
       TextSettings.Trimming = None
       IsSelected = False
-      Size.Width = 69.000000000000000000
+      Size.Width = 58.000000000000000000
       Size.Height = 26.000000000000000000
       Size.PlatformDefault = False
       StyleLookup = ''
       TabOrder = 0
-      Text = 'TabItem2'
+      TabStop = False
+      Text = 'Output'
       ExplicitSize.cx = 69.000000000000000000
       ExplicitSize.cy = 26.000000000000000000
     end

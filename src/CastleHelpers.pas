@@ -9,18 +9,6 @@ uses  System.SysUtils, System.Classes, System.Types, CastleScene, CastleVectors,
 
 
 type
-  { TCastleSceneHelper }
- // TCastleSceneHelper = class helper for TCastleScene
- //   function Normalize: Boolean;
-    { Fit the Scene in a 1x1x1 box }
- // end;
-
-  { TCastleCameraHelper }
-  TCastleCameraHelper = class helper for TCastleTransform
-    procedure ViewFromRadius(const ARadius: Single; const ACamPos: TVector3);
-    { Position Camera ARadius from Origin pointing at Origin }
-  end;
-
   { TCastleViewHelper }
   TCastleViewportHelper = class helper for TCastleViewport
   public
@@ -33,17 +21,6 @@ type
 implementation
 
 uses Math;
-
-procedure TCastleCameraHelper.ViewFromRadius(const ARadius: Single; const ACamPos: TVector3);
-var
-  Spherical: TVector3;
-begin
-  Spherical := ACamPos.Normalize;
-  Spherical := Spherical * ARadius;
-  Up := Vector3(0, 1, 0);
-  Direction := -ACamPos;
-  Translation  := Spherical;
-end;
 
 function TCastleViewportHelper.CalcAngles(const AScene: TCastleModel): TExtents;
 var
@@ -122,6 +99,5 @@ begin
       Container.UnscaledHeight * ((AVec.Y * AModel.NormalScale) + 0.5)
     )
 end;
-
 
 end.

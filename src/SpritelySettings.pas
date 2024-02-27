@@ -1,10 +1,14 @@
 unit SpritelySettings;
 
+// {$define badtex}
+
 interface
 
 uses
   System.SysUtils, System.IOUtils, System.Types, System.UITypes, System.Classes,
-  System.Variants, System.JSON, JSON.Types
+  System.Variants, System.JSON, JSON.Types,
+  CastleApplicationProperties,
+  CastleLog
   ;
 
 type
@@ -13,12 +17,17 @@ type
     AppData: String;
     AppVersion: String;
     LoadFromDir: String;
+    LastModel: String;
     SaveToDir: String;
+    SearchDir: String;
     UpdateRequired: Boolean;
     constructor Create; virtual;
     destructor Destroy; override;
     procedure Load;
     procedure Save;
+    {$ifdef badtex}
+    procedure OnWarningRaiseException(const Category, S: string);
+    {$endif}
   end;
 
 var
@@ -32,11 +41,17 @@ const
 implementation
 
 uses
+  CastleGLUtils,
   JSON.Serializers;
 
 constructor TPDXSettings.Create;
 begin
   inherited;
+  LogFileName := 'Spritely.log';
+  InitializeLog;
+  {$ifdef badtex}
+  ApplicationProperties.OnWarning.Add({$ifdef FPC}@{$endif}OnWarningRaiseException);
+  {$endif}
   {$IF DEFINED(MSWINDOWS)}
   AppHome := IncludeTrailingPathDelimiter(System.IOUtils.TPath.GetHomePath) + APPNAME;
   {$ENDIF}
@@ -44,7 +59,7 @@ begin
   AppHome := IncludeTrailingPathDelimiter(System.IOUtils.TPath.GetLibraryPath) + APPNAME;
   {$ENDIF}
   {$IF DEFINED(LINUX)}
-  AppHome := IncludeTrailingPathDelimiter(System.IOUtils.TPath.GetLibraryPath) + APPNAME;
+  AppHome := IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(System.IOUtils.TPath.GetHomePath) + '.config') + APPNAME;
   {$ENDIF}
   // System agnostic path for data files
 
@@ -52,18 +67,23 @@ begin
   AppData := AppHome;
   AppVersion := APPVER;
   {$IF DEFINED(MSWINDOWS)}
+  SearchDir := GetCurrentDir() + '\data';
   LoadFromDir := GetCurrentDir() + '\data';
   SaveToDir := GetCurrentDir() + '\data';
   {$ENDIF}
   {$IF DEFINED(MACOS)}
+  SearchDir := AppHome + '/data';
   LoadFromDir := AppHome + '/data';
   SaveToDir := AppHome + '/data';
   {$ENDIF}
   {$IF DEFINED(LINUX)}
+  SearchDir := AppHome + '/data';
   LoadFromDir := AppHome + '/data';
   SaveToDir := AppHome + '/data';
+  LogGLInformationVerbose := true;
   {$ENDIF}
   UpdateRequired := True;
+  LastModel := '';
 
   if not DirectoryExists(AppHome) then
     begin
@@ -109,6 +129,8 @@ begin
       jobj.TryGetValue('AppVersion', AppVersion);
       jobj.TryGetValue('LoadFromDir', LoadFromDir);
       jobj.TryGetValue('SaveToDir', SaveToDir);
+      jobj.TryGetValue('SearchDir', SearchDir);
+      jobj.TryGetValue('LastModel', LastModel);
 
       if AppVersion = LastVersion then
         UpdateRequired := False
@@ -152,6 +174,14 @@ begin
     FreeAndNil(lSerializer);
   end;
 end;
+
+{$ifdef badtex}
+procedure TPDXSettings.OnWarningRaiseException(const Category, S: string);
+begin
+  raise Exception.CreateFmt('Cat: %s Msg: %s',
+    [Category, S]);
+end;
+{$endif}
 
 initialization
   {$Message 'Settings init'}

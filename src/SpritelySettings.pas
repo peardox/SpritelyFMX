@@ -184,7 +184,7 @@ end;
 {$endif}
 
 initialization
-  {$Message 'Settings init'}
+//  {$Message 'Settings init'}
   SystemSettings := TPDXSettings.Create;
 
 finalization

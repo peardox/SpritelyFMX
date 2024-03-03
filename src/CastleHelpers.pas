@@ -20,7 +20,7 @@ type
 
 implementation
 
-uses Math;
+uses Math, CastleLog;
 
 function TCastleViewportHelper.CalcAngles(const AScene: TCastleModel): TExtents;
 var
@@ -80,8 +80,8 @@ begin
     )
   else
     Result := Vector2(
-      Container.UnscaledWidth  * ((AVec.X * AModel.NormalScale) + 0.5),
-      Container.UnscaledHeight * ((AVec.Y * AModel.NormalScale) + 0.5)
+      Container.UnscaledWidth  * ((AVec.X * AModel.NormalScale) + Camera.Orthographic.Origin.X),
+      Container.UnscaledHeight * ((AVec.Y * AModel.NormalScale) + Camera.Orthographic.Origin.Y)
     )
 
 end;
@@ -95,8 +95,8 @@ begin
     )
   else
     Result := Vector2(
-      Container.UnscaledWidth  * ((AVec.X * AModel.NormalScale) + 0.5),
-      Container.UnscaledHeight * ((AVec.Y * AModel.NormalScale) + 0.5)
+      Container.UnscaledWidth  * ((AVec.X * AModel.NormalScale) + Camera.Orthographic.Origin.X),
+      Container.UnscaledHeight * ((AVec.Y * AModel.NormalScale) + Camera.Orthographic.Origin.Y)
     )
 end;
 

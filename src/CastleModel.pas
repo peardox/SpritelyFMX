@@ -1,5 +1,7 @@
 unit CastleModel;
 
+{$define poly}
+
 interface
 
 uses System.SysUtils, System.Types, System.UITypes, System.Classes, System.Generics.Collections,
@@ -144,6 +146,7 @@ procedure TCastleModel.AddDebugBox;
 begin
     fDebugBox := TDebugTransformHexahedron.Create(Self);
     fDebugBox.Parent := Self;
+//    fDebugBox.Radius := 1.0;
     fDebugBox.Exists := False;
 end;
 
@@ -154,6 +157,7 @@ begin
   fAlign.X := modelXCenter;
   fAlign.Y := modelYBottom;
   fAlign.Z := modelZCenter;
+  Normalize;
   fGimbal := TGimbal.Create(Self);
   fDebugBox := Nil;
 end;
@@ -329,6 +333,7 @@ begin
     begin
       if fChildOf.Owner is TCastleApp then
         begin
+ //         SendMessage('Selecting');
           OwningCastleApp := fChildOf.Owner as TCastleApp;
           OwningCastleApp.SelectedModel := Self;
         end;

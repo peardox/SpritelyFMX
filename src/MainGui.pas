@@ -56,6 +56,7 @@ type
     StringColumn4: TStringColumn;
     MenuItem3: TMenuItem;
     mnuCheckGLTF: TMenuItem;
+    mnuClear: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure LayoutLeftResize(Sender: TObject);
     procedure Switch3DClick(Sender: TObject);
@@ -73,6 +74,7 @@ type
     procedure ModelMove(const OX, OY: Single);
     procedure CheckBox1Change(Sender: TObject);
     procedure mnuCheckGLTFClick(Sender: TObject);
+    procedure mnuClearClick(Sender: TObject);
   private
     { Private declarations }
     cameraAngle: TPDXRadialDial;
@@ -87,6 +89,9 @@ type
     procedure RotateCamera(Sender: TObject; const ARotation: Single);
     procedure InclineCamera(Sender: TObject; const ARotation: Single);
     procedure UpdateModelInfo;
+    procedure UpdateCamInfo;
+    procedure CastleClick(Sender: TObject);
+    procedure CameraMove(const OX, OY: Single);
   public
     { Public declarations }
   end;
@@ -102,37 +107,88 @@ uses
   Math,
   SpritelyCheckTextures,
   CastleHelpers,
+  CastleCameras,
+  CastleTransform,
   CastleVectors;
 
 {$R *.fmx}
 
+procedure TForm1.CastleClick(Sender: TObject);
+var
+  model: TCastleTransform;
+begin
+  Memo1.Lines.Clear;
+  if Assigned(CastleApp) and (CastleApp.Models.Kids.Count > 0) then
+    begin
+      model := CastleApp.UnderMouse;
+      if model is TCastleModel then
+        begin
+          with model as TCastleModel do
+            begin
+            SelectModel;
+            if HasDebugBox then
+              ShowDebugBox(False)
+            else
+              ShowDebugBox(True);
+            end;
+        end;
+    end;
+end;
+
 procedure TForm1.Button1Click(Sender: TObject);
+{
 var
   E: TExtents;
   model: TCastleModel;
+  d: TViewStats;
+  fc: Single;
+}
 begin
+{
+  if Assigned(CastleApp.Stage) then
+    begin
+      if CastleApp.Models.Kids.Count > 0 then
+        begin
+          fc := CastleApp.FitCam;
+        //  CastleApp.CamWidth := (fc * d.Box.View3D.Width);
 
-  model := CastleApp.SelectedModel;
-  if model <> Nil then
-  begin
-    E:=CastleApp.Viewport.CalcAngles(model);
-    Memo1.Lines.Add('Min : ' + E.Min.ToString);
-    Memo1.Lines.Add('Max : ' + E.Max.ToString);
-    Memo1.Lines.Add('Size: ' + E.Size.ToString);
-    Memo1.Lines.Add('Pix : ' + E.Pixels.ToString);
-    Memo1.Lines.Add('Stage : ' + CastleApp.Stage.BoundingBox.Size.ToString);
-  end;
+          Memo1.Lines.Clear;
+          Memo1.Lines.Add('Stats');
+          Memo1.Lines.Add('Zoom: ' + FloatToStr(CastleApp.Zoom));
+          d := CastleApp.GetAxis(CastleApp.Stage);
+          Memo1.Lines.Add('2DW: ' + d.Box.View2D.Width.ToString);
+          Memo1.Lines.Add('2DH: ' + d.Box.View2D.Height.ToString);
+          Memo1.Lines.Add('3DW: ' + d.Box.View3D.Width.ToString);
+          Memo1.Lines.Add('3DH: ' + d.Box.View3D.Height.ToString);
+          Memo1.Lines.Add('CtrH: ' + FloatToStr(CastleApp.Container.UnscaledHeight));
+          Memo1.Lines.Add('CtrW: ' + FloatToStr(CastleApp.Container.UnscaledWidth));
+          Memo1.Lines.Add('Stage');
+          E:=CastleApp.Viewport.CalcAngles(CastleApp.Stage);
+          Memo1.Lines.Add('OK  : ' + E.IsValid.ToString);
+          Memo1.Lines.Add('Min : ' + E.Min.ToString);
+          Memo1.Lines.Add('Max : ' + E.Max.ToString);
+          Memo1.Lines.Add('Size: ' + E.Size.ToString);
+          Memo1.Lines.Add('CamH: ' + FloatToStr(CastleApp.CamHeight));
+          Memo1.Lines.Add('CamW: ' + FloatToStr(CastleApp.CamWidth));
+          Memo1.Lines.Add('Scale: ' + CastleApp.Stage.Scale.ToString);
+          Memo1.Lines.Add('Pix : ' + E.Pixels.ToString);
+        end;
+    end;
+
 
 //  cameraInclination.Angle := 0.81625;
+ }
   if not DoneOne then
     begin
-//      cameraInclination.Angle := ((Pi/2) - 0.615088935); // True ISO
-      cameraInclination.Angle := ((Pi/2) - (pi / 6)); // 2:1 ISO
+      cameraInclination.Angle := ((Pi/2) - 0.615088935); // True ISO
+//      cameraInclination.Angle := ((Pi/2) - (pi / 6)); // 2:1 ISO
 //      cameraInclination.Angle := ((Pi/2) - 0.955316618); // sqrt(2)
 //      cameraInclination.Angle := ((Pi/2) - 1.10714872); // (3/4)
       cameraAngle.Angle := 0.785398185253143;
+      CastleApp.Zoom := 0.80544854304;
       DoneOne := True;
     end;
+
 end;
 
 procedure TForm1.CheckBox1Change(Sender: TObject);
@@ -153,6 +209,7 @@ begin
   CastleControl := TCastleControl.Create(View3D);
   CastleControl.Align := TAlignLayout.Client;
   CastleControl.Parent := View3D;
+  CastleControl.OnClick := CastleClick;
   CastleApp := TCastleApp.Create(CastleControl);
   CastleApp.OnExtMessage := LogTicker;
   CastleApp.OnModel := NewModel;
@@ -206,26 +263,66 @@ begin
   StringGrid1.Cells[0,8] := 'Size X';
   StringGrid1.Cells[0,9] := 'Size Y';
   StringGrid1.Cells[0,10] := 'Size Z';
+
+  StringGrid2.RowCount := 14;
+  StringGrid2.Cells[0,0] := 'Stage X';
+  StringGrid2.Cells[0,1] := 'Stage Y';
+  StringGrid2.Cells[0,2] := 'Stage Z';
+  StringGrid2.Cells[0,3] := 'Middle X';
+  StringGrid2.Cells[0,4] := 'Middle Y';
+  StringGrid2.Cells[0,5] := 'Middle Z';
+  StringGrid2.Cells[0,6] := 'Center X';
+  StringGrid2.Cells[0,7] := 'Center Y';
+  StringGrid2.Cells[0,8] := 'Center Z';
+  StringGrid2.Cells[0,9] := 'LookAt X';
+  StringGrid2.Cells[0,10] := 'LookAt Y';
+  StringGrid2.Cells[0,11] := 'LookAt Z';
+  StringGrid2.Cells[0,12] := 'Azimuth';
+  StringGrid2.Cells[0,13] := 'Inclination';
+
+
+  UpdateModelInfo;
+  UpdateCamInfo;
 end;
 
 procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word;
   var KeyChar: WideChar; Shift: TShiftState);
 begin
-//  Memo1.Lines.Add('KeyPress : Key = ' + IntToStr(Key));
-  case Key of
-    37: begin // Left
-          ModelMove( -0.01,  0);
-        end;
-    38: begin // Up
-          ModelMove(  0, +0.01);
-        end;
-    39: begin // Right
-          ModelMove( +0.01,  0);
-        end;
-    40: begin //Down
-          ModelMove(  0, -0.01);
-        end;
+if TabControl2.ActiveTab = TabModel then
+  begin
+    case Key of
+      37: begin // Left
+            ModelMove( -0.01,  0);
+          end;
+      38: begin // Up
+            ModelMove(  0, -0.01);
+          end;
+      39: begin // Right
+            ModelMove( +0.01,  0);
+          end;
+      40: begin //Down
+            ModelMove(  0, +0.01);
+          end;
+    end;
+  end else if TabControl2.ActiveTab = TabCamera then
+  begin
+    case Key of
+      37: begin // Left
+            CameraMove( +0.01,  0);
+          end;
+      38: begin // Up
+            CameraMove(  0, -0.01);
+          end;
+      39: begin // Right
+            CameraMove( -0.01,  0);
+          end;
+      40: begin //Down
+            CameraMove(  0, +0.01);
+          end;
+    end;
   end;
+
+//  UpdateCamInfo;
 
 end;
 
@@ -255,6 +352,36 @@ begin
 
 end;
 
+procedure TForm1.UpdateCamInfo;
+var
+  cam: TCastleCamera;
+begin
+  if Assigned(CastleApp) then
+  begin
+    cam := CastleApp.Camera.Camera;
+//    CastleApp.ApplyView;
+    if Assigned(cam) then
+      begin
+        if not CastleApp.Stage.BoundingBox.IsEmptyOrZero then
+          begin
+            StringGrid2.Cells[1,0] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.SizeX);
+            StringGrid2.Cells[1,1] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.SizeY);
+            StringGrid2.Cells[1,2] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.SizeZ);
+            StringGrid2.Cells[1,3] := FormatFloat('###0.000', CastleApp.Stage.Middle.X);
+            StringGrid2.Cells[1,4] := FormatFloat('###0.000', CastleApp.Stage.Middle.Y);
+            StringGrid2.Cells[1,5] := FormatFloat('###0.000', CastleApp.Stage.Middle.Z);
+            StringGrid2.Cells[1,6] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.Center.X);
+            StringGrid2.Cells[1,7] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.Center.Y);
+            StringGrid2.Cells[1,8] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.Center.Z);
+            StringGrid2.Cells[1,9] := FormatFloat('###0.000', CastleApp.Camera.LookAt.X);
+            StringGrid2.Cells[1,10] := FormatFloat('###0.000', CastleApp.Camera.LookAt.Y);
+            StringGrid2.Cells[1,11] := FormatFloat('###0.000', CastleApp.Camera.LookAt.Z);
+          end;
+        StringGrid2.Cells[1,12] := FormatFloat('###0.000', CastleApp.Azimuth);
+        StringGrid2.Cells[1,13] := FormatFloat('###0.000', CastleApp.Inclination);
+      end;
+  end;
+end;
 procedure TForm1.LayoutLeftResize(Sender: TObject);
 begin
 //  Button1.Height := 0;
@@ -271,11 +398,13 @@ var
   factor: Integer;
 begin
   factor := 1;
-
-  if WheelDelta < 0 then
-    CastleApp.ZoomOut(factor);
+//Button1Click(Self);
+//exit;
   if WheelDelta > 0 then
+    CastleApp.ZoomOut(factor);
+  if WheelDelta < 0 then
     CastleApp.ZoomIn(factor);
+ // Button1Click(Self);
 end;
 
 procedure TForm1.LayoutViewResize(Sender: TObject);
@@ -334,15 +463,33 @@ begin
     end;
 end;
 
+procedure TForm1.mnuClearClick(Sender: TObject);
+begin
+  if Assigned(CastleApp) then
+    CastleApp.RemoveModels;
+end;
+
 procedure TForm1.ModelMove(const OX, OY: Single);
 var
   model: TCastleModel;
 begin
-  model := CastleApp.SelectedModel;
-  if model <> Nil then
+  if Assigned(CastleApp) then
   begin
-    model.Translation := model.Translation + Vector3(OX,0,OY);
-    UpdateModelInfo;
+    model := CastleApp.SelectedModel;
+    if model <> Nil then
+    begin
+      model.Translation := model.Translation + Vector3(OX,0,OY);
+      UpdateModelInfo;
+    end;
+  end;
+end;
+
+procedure TForm1.CameraMove(const OX, OY: Single);
+begin
+  if Assigned(CastleApp) and Assigned(CastleApp.Camera) then
+  begin
+    CastleApp.Camera.Pan := CastleApp.Camera.Pan + Vector2(OX,OY);
+    UpdateCamInfo;
   end;
 end;
 
@@ -354,17 +501,17 @@ end;
 procedure TForm1.InclineCamera(Sender: TObject; const ARotation: Single);
 begin
   CastleApp.Inclination := ARotation;
-  Memo1.Lines.Clear;
-  Memo1.Lines.Add('Inc = ' + FloatToStr(ARotation));
-  CastleApp.ApplyView;
+//  Memo1.Lines.Clear;
+//  Memo1.Lines.Add('Inc = ' + FloatToStr(ARotation));
+  UpdateCamInfo;
 end;
 
 procedure TForm1.RotateCamera(Sender: TObject; const ARotation: Single);
 begin
   CastleApp.Azimuth := ARotation;
-  Memo1.Lines.Clear;
-  Memo1.Lines.Add('Azi = ' + FloatToStr(ARotation));
-  CastleApp.ApplyView;
+//  Memo1.Lines.Clear;
+//  Memo1.Lines.Add('Azi = ' + FloatToStr(ARotation));
+  UpdateCamInfo;
 end;
 
 procedure TForm1.RotateModel(Sender: TObject; const ARotation: Single);
@@ -376,6 +523,7 @@ begin
   begin
     model.Gimbal.Rotation := Vector4(0,1,0,ARotation);
     UpdateModelInfo;
+    UpdateCamInfo;
   end;
 end;
 
@@ -412,11 +560,13 @@ end;
 procedure TForm1.TabCameraClick(Sender: TObject);
 begin
   CastleControl.SetFocus;
+  UpdateCamInfo;
 end;
 
 procedure TForm1.TabModelClick(Sender: TObject);
 begin
   CastleControl.SetFocus;
+  UpdateModelInfo;
 end;
 
 end.

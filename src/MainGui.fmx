@@ -36,6 +36,11 @@ object Form1: TForm1
         Text = 'Load'
         OnClick = mnuLoadClick
       end
+      object mnuClear: TMenuItem
+        Locked = True
+        Text = 'Clear Stage'
+        OnClick = mnuClearClick
+      end
     end
     object MenuItem3: TMenuItem
       Text = 'Utilities'
@@ -154,7 +159,7 @@ object Form1: TForm1
           Size.Width = 240.000000000000000000
           Size.Height = 704.000000000000000000
           Size.PlatformDefault = False
-          TabIndex = 1
+          TabIndex = 0
           TabOrder = 1
           TabStop = False
           TabPosition = Bottom
@@ -168,7 +173,7 @@ object Form1: TForm1
               item
               end>
             TextSettings.Trimming = None
-            IsSelected = False
+            IsSelected = True
             Size.Width = 55.000000000000000000
             Size.Height = 26.000000000000000000
             Size.PlatformDefault = False
@@ -232,7 +237,7 @@ object Form1: TForm1
               item
               end>
             TextSettings.Trimming = None
-            IsSelected = True
+            IsSelected = False
             Size.Width = 61.000000000000000000
             Size.Height = 26.000000000000000000
             Size.PlatformDefault = False

@@ -1,0 +1,6 @@
+You can pan the camera in any direction. What each direction means (in local and world space) depends on your setup.
+
+You can e.g.
+use Camera.GetWorldView(Pos, Dir, Up) to get Pos, Dir, Up in world coordinates,
+calculate then Side := TVector3.CrossProduct(Dir, Up),
+and move as need adding X * Side + Y * Up to global position, by Camera.SetWorldView(Pos + X * Side + Y * Up, Dir, Up).

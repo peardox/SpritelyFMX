@@ -21,6 +21,12 @@ type
     Aspect: Single;
   end;
 
+  { TViewBox }
+  TViewBox = record
+    View2D: TFloatRectangle;
+    View3D: TFloatRectangle;
+  end;
+
   { TOutputSize }
   TUnitConfig = record
     Width: Integer;
@@ -34,7 +40,7 @@ type
     isValid: Boolean;
     Diagonal: TVector2;
     DyDx: Single;
-    Box: TFloatRectangle;
+    Box: TViewBox;
     GroundRect: array[0..3] of TVector2;
   end;
 

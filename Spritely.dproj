@@ -285,7 +285,6 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <DCCReference Include="src\SpritelyTypes.pas"/>
         <DCCReference Include="src\CastleModel.pas"/>
         <DCCReference Include="src\CastleHelpers.pas"/>
-        <DCCReference Include="src\UIPieces.pas"/>
         <DCCReference Include="src\SpritelyControls.pas"/>
         <DCCReference Include="src\SpritelyDebug.pas"/>
         <DCCReference Include="src\SphericalCamera.pas"/>
@@ -362,6 +361,12 @@ $(PostBuildEvent)]]></PostBuildEvent>
                 <DeployFile LocalName="Win64\Debug\Spritely.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win64">
                         <RemoteName>Spritely.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="Win64\Debug\Spritely.rsm" Configuration="Debug" Class="DebugSymbols">
+                    <Platform Name="Win64">
+                        <RemoteName>Spritely.rsm</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

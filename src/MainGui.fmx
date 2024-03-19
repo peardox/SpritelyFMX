@@ -2,13 +2,14 @@ object Form1: TForm1
   Left = 0
   Top = 0
   Caption = 'FMXTest'
-  ClientHeight = 800
-  ClientWidth = 1280
+  ClientHeight = 1024
+  ClientWidth = 1437
   StyleBook = StyleBook1
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnKeyDown = FormKeyDown
   DesignerMasterStyle = 0
   object StyleBook1: TStyleBook
@@ -20,7 +21,7 @@ object Form1: TForm1
   end
   object LayoutTop: TLayout
     Align = Top
-    Size.Width = 1280.000000000000000000
+    Size.Width = 1437.000000000000000000
     Size.Height = 8.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 3
@@ -41,6 +42,19 @@ object Form1: TForm1
         Text = 'Clear Stage'
         OnClick = mnuClearClick
       end
+      object MenuItem2: TMenuItem
+        Locked = True
+        Text = 'Directory'
+        object MenuItem4: TMenuItem
+          Locked = True
+          Text = 'Scan GLTF Pack(s)'
+          OnClick = MenuItem4Click
+        end
+        object MenuItem5: TMenuItem
+          Locked = True
+          Text = 'Scan OBJ Pack(s)'
+        end
+      end
     end
     object MenuItem3: TMenuItem
       Text = 'Utilities'
@@ -56,9 +70,9 @@ object Form1: TForm1
     Top = 416
   end
   object StatusBar1: TStatusBar
-    Position.Y = 778.000000000000000000
+    Position.Y = 1002.000000000000000000
     ShowSizeGrip = True
-    Size.Width = 1280.000000000000000000
+    Size.Width = 1437.000000000000000000
     Size.Height = 22.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 1
@@ -66,18 +80,18 @@ object Form1: TForm1
   end
   object TabControl1: TTabControl
     Align = Client
-    Size.Width = 1280.000000000000000000
-    Size.Height = 770.000000000000000000
+    Size.Width = 1437.000000000000000000
+    Size.Height = 994.000000000000000000
     Size.PlatformDefault = False
     TabIndex = 0
     TabOrder = 0
     TabStop = False
     TabPosition = PlatformDefault
     Sizes = (
-      1280s
-      744s
-      1280s
-      744s)
+      1437s
+      968s
+      1437s
+      968s)
     object TabProject: TTabItem
       CustomIcon = <
         item
@@ -95,8 +109,8 @@ object Form1: TForm1
       ExplicitSize.cy = 26.000000000000000000
       object LayoutView: TLayout
         Align = Client
-        Size.Width = 800.000000000000000000
-        Size.Height = 744.000000000000000000
+        Size.Width = 957.000000000000000000
+        Size.Height = 968.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 2
         TabStop = False
@@ -113,22 +127,11 @@ object Form1: TForm1
       object LayoutLeft: TLayout
         Align = Left
         Size.Width = 240.000000000000000000
-        Size.Height = 744.000000000000000000
+        Size.Height = 968.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 6
         TabStop = False
         OnResize = LayoutLeftResize
-        object Button1: TButton
-          Position.Y = 361.000000000000000000
-          Size.Width = 80.000000000000000000
-          Size.Height = 22.000000000000000000
-          Size.PlatformDefault = False
-          TabOrder = 0
-          TabStop = False
-          Text = 'Button1'
-          TextSettings.Trimming = None
-          OnClick = Button1Click
-        end
         object Memo1: TMemo
           Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
           DataDetectorTypes = []
@@ -136,19 +139,29 @@ object Form1: TForm1
           TextSettings.Font.Family = 'Noto Mono'
           Align = Top
           Size.Width = 240.000000000000000000
-          Size.Height = 361.000000000000000000
+          Size.Height = 240.000000000000000000
           Size.PlatformDefault = False
           TabOrder = 1
           TabStop = False
           Viewport.Width = 236.000000000000000000
-          Viewport.Height = 357.000000000000000000
+          Viewport.Height = 236.000000000000000000
+        end
+        object TreeView1: TTreeView
+          Align = Top
+          Position.Y = 240.000000000000000000
+          Size.Width = 240.000000000000000000
+          Size.Height = 240.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 0
+          Viewport.Width = 236.000000000000000000
+          Viewport.Height = 236.000000000000000000
         end
       end
       object Layout4: TLayout
         Align = Right
-        Position.X = 1040.000000000000000000
+        Position.X = 1197.000000000000000000
         Size.Width = 240.000000000000000000
-        Size.Height = 744.000000000000000000
+        Size.Height = 968.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 10
         TabStop = False
@@ -157,7 +170,7 @@ object Form1: TForm1
           Align = Client
           HitTest = False
           Size.Width = 240.000000000000000000
-          Size.Height = 704.000000000000000000
+          Size.Height = 928.000000000000000000
           Size.PlatformDefault = False
           TabIndex = 0
           TabOrder = 1
@@ -165,9 +178,9 @@ object Form1: TForm1
           TabPosition = Bottom
           Sizes = (
             240s
-            678s
+            902s
             240s
-            678s)
+            902s)
           object TabModel: TTabItem
             CustomIcon = <
               item
@@ -188,14 +201,14 @@ object Form1: TForm1
               Align = Bottom
               CanFocus = True
               ClipChildren = True
-              Position.Y = 328.000000000000000000
+              Position.Y = 462.000000000000000000
               Size.Width = 240.000000000000000000
-              Size.Height = 350.000000000000000000
+              Size.Height = 440.000000000000000000
               Size.PlatformDefault = False
               TabOrder = 0
-              RowCount = 11
+              RowCount = 14
               Viewport.Width = 236.000000000000000000
-              Viewport.Height = 325.000000000000000000
+              Viewport.Height = 415.000000000000000000
               object StringColumn1: TStringColumn
                 Header = 'Property'
               end
@@ -204,32 +217,12 @@ object Form1: TForm1
                 Header = 'Value'
               end
             end
-            object ModelRotationLayout: TLayout
-              Align = Top
-              Padding.Left = 1.000000000000000000
-              Padding.Top = 1.000000000000000000
-              Padding.Right = 1.000000000000000000
-              Padding.Bottom = 1.000000000000000000
-              Margins.Left = 2.000000000000000000
-              Margins.Top = 2.000000000000000000
-              Margins.Right = 2.000000000000000000
-              Margins.Bottom = 2.000000000000000000
-              Position.X = 2.000000000000000000
-              Position.Y = 2.000000000000000000
-              Size.Width = 236.000000000000000000
-              Size.Height = 257.000000000000000000
-              Size.PlatformDefault = False
+            object Button1: TButton
+              Position.X = 8.000000000000000000
+              Position.Y = 408.000000000000000000
               TabOrder = 1
-            end
-            object CheckBox1: TCheckBox
-              Align = Bottom
-              Position.Y = 309.000000000000000000
-              Size.Width = 240.000000000000000000
-              Size.Height = 19.000000000000000000
-              Size.PlatformDefault = False
-              TabOrder = 2
-              Text = 'Show Debug Box'
-              OnChange = CheckBox1Change
+              Text = 'AutoFit'
+              OnClick = Button1Click
             end
           end
           object TabCamera: TTabItem
@@ -269,12 +262,12 @@ object Form1: TForm1
               CanFocus = True
               ClipChildren = True
               Size.Width = 240.000000000000000000
-              Size.Height = 181.000000000000000000
+              Size.Height = 405.000000000000000000
               Size.PlatformDefault = False
               TabOrder = 0
-              RowCount = 11
-              Viewport.Width = 220.000000000000000000
-              Viewport.Height = 156.000000000000000000
+              RowCount = 14
+              Viewport.Width = 236.000000000000000000
+              Viewport.Height = 380.000000000000000000
               object StringColumn3: TStringColumn
                 Header = 'Property'
               end
@@ -312,6 +305,12 @@ object Form1: TForm1
             TabStop = False
             OnClick = Switch3DClick
           end
+          object cbxProjections: TComboBox
+            Position.X = 132.000000000000000000
+            Position.Y = 10.000000000000000000
+            TabOrder = 2
+            OnChange = cbxProjectionsChange
+          end
         end
       end
     end
@@ -331,5 +330,11 @@ object Form1: TForm1
       ExplicitSize.cx = 69.000000000000000000
       ExplicitSize.cy = 26.000000000000000000
     end
+  end
+  object Timer1: TTimer
+    Enabled = False
+    OnTimer = Timer1Timer
+    Left = 456
+    Top = 578
   end
 end

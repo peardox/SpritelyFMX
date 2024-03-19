@@ -6,12 +6,27 @@ interface
 
 uses
   System.SysUtils, System.IOUtils, System.Types, System.UITypes, System.Classes,
-  System.Variants, System.JSON, JSON.Types,
+  System.Variants, System.JSON, JSON.Types, System.Generics.Collections,
   CastleApplicationProperties,
   CastleLog
   ;
 
 type
+  TProjection = class
+  private
+    fName: String;
+    fAzimuth: Single;
+    fInclination: Single;
+  public
+    constructor Create(const AName: String; const AInclination: Single; AAzimuth: Single);
+    destructor Destroy; override;
+    property Name: String read fName write fName;
+    property Azimuth: Single read fAzimuth write fAzimuth;
+    property Inclination: Single read fInclination write fInclination;
+  end;
+
+  TProjectionArray = TArray<TProjection>;
+
   TPDXSettings = class
     AppHome: String;
     AppData: String;
@@ -20,14 +35,18 @@ type
     LastModel: String;
     SaveToDir: String;
     SearchDir: String;
+    Projections: TProjectionArray;
     UpdateRequired: Boolean;
-    constructor Create; virtual;
-    destructor Destroy; override;
     procedure Load;
     procedure Save;
     {$ifdef badtex}
     procedure OnWarningRaiseException(const Category, S: string);
     {$endif}
+  private
+    procedure CreateProjections;
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
   end;
 
 var
@@ -102,16 +121,17 @@ begin
 
 end;
 
-destructor TPDXSettings.Destroy;
-begin
-  inherited;
-end;
-
 procedure TPDXSettings.Load;
 var
-  jobj: TJSONObject;
+  jobj, jobj2: TJSONObject;
+  jarr: TJSONArray;
   JsonText: String;
   LastVersion: String;
+  I: Integer;
+  Proj: TProjection;
+  AName: String;
+  AInclination: Single;
+  AAzimuth: Single;
 begin
   try
     JsonText := TFile.ReadAllText(IncludeTrailingPathDelimiter(AppHome) + 'Settings.json');
@@ -131,6 +151,29 @@ begin
       jobj.TryGetValue('SaveToDir', SaveToDir);
       jobj.TryGetValue('SearchDir', SearchDir);
       jobj.TryGetValue('LastModel', LastModel);
+      jobj.TryGetValue('Projections', jarr);
+      if jarr.Count > 0 then
+        begin
+          SetLength(Projections, jarr.Count);
+          for I := 0 to jarr.Count - 1 do
+            begin
+              try
+                jobj2 := jarr[I] as TJSONObject;
+                jobj2.TryGetValue('fName', AName);
+                jobj2.TryGetValue('fInclination', AInclination);
+                jobj2.TryGetValue('fAzimuth', AAzimuth);
+                Projections[I] := TProjection.Create(AName, AInclination, AAzimuth);
+              except
+               on E : Exception do
+                 Raise Exception.Create('Load Projection Settings - Exception : Class = ' +
+                  E.ClassName + ', Message = ' + E.Message);
+              end;
+            end;
+        end
+      else
+        begin
+          CreateProjections;
+        end;
 
       if AppVersion = LastVersion then
         UpdateRequired := False
@@ -175,6 +218,32 @@ begin
   end;
 end;
 
+procedure TPDXSettings.CreateProjections;
+const
+  ProjCount = 8;
+begin
+  SetLength(Projections, ProjCount);
+  Projections[0] := TProjection.Create('Head On', (Pi/2), 0);
+  Projections[1] := TProjection.Create('Top Down', 0, 0);
+  Projections[2] := TProjection.Create('Right', (Pi/2),(Pi/2));
+  Projections[3] := TProjection.Create('Left', -(Pi/2),(Pi/2));
+  Projections[4] := TProjection.Create('True Isometric', ((Pi/2) - 0.615088935), 0.785398185253143);
+  Projections[5] := TProjection.Create('Pixel Isometric', ((Pi/2) - (pi / 6)), 0.785398185253143);
+  Projections[6] := TProjection.Create('Root 2', ((Pi/2) - 0.955316618), 0.785398185253143);
+  Projections[7] := TProjection.Create('3/4 View', ((Pi/2) - 1.10714872), 0.785398185253143);
+end;
+
+
+destructor TPDXSettings.Destroy;
+var
+  I: Integer;
+begin
+  for I := 0 to Length(Projections) - 1 do
+    FreeAndNil(Projections[I]);
+  SetLength(Projections, 0);
+  inherited;
+end;
+
 {$ifdef badtex}
 procedure TPDXSettings.OnWarningRaiseException(const Category, S: string);
 begin
@@ -182,6 +251,20 @@ begin
     [Category, S]);
 end;
 {$endif}
+
+{ TProjection }
+
+constructor TProjection.Create(const AName: String; const AInclination: Single; AAzimuth: Single);
+begin
+  fName := AName;
+  fInclination := AInclination;
+  fAzimuth := AAzimuth;
+end;
+
+destructor TProjection.Destroy;
+begin
+  inherited;
+end;
 
 initialization
 //  {$Message 'Settings init'}

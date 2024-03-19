@@ -29,12 +29,12 @@ type
     FActive: Boolean;
     FMoving: Boolean;
     FSteps: Integer;
-    FAngleText: String;
+//    FAngleText: String;
     FMin: Single;
     FMax: Single;
     FDoExtMessage: TPDXMessageEvent;
     FDoExtRotate: TPDXRotationEvent;
-    procedure SendMessage(const AMsg: String);
+//    procedure SendMessage(const AMsg: String);
     procedure SetDoExtMessage(const AProc: TPDXMessageEvent);
     procedure DoRotate(const ARotation: Single);
     procedure SetDoExtRotate(const AProc: TPDXRotationEvent);
@@ -78,19 +78,19 @@ type
     FRadius: Single;
     FActive: Boolean;
     FMoving: Boolean;
-    FAngleText: String;
+//    FAngleText: String;
     FMin: Single;
     FMax: Single;
     FOffset: Single;
     FMultiplier: Single;
     FDoExtMessage: TPDXMessageEvent;
     FDoExtRotate: TPDXRotationEvent;
-    procedure SendMessage(const AMsg: String);
+//    procedure SendMessage(const AMsg: String);
     procedure SetDoExtMessage(const AProc: TPDXMessageEvent);
     procedure DoRotate(const ARotation: Single);
     procedure SetDoExtRotate(const AProc: TPDXRotationEvent);
     procedure SetKnobAngle(const AValue: Single);
-    function  GetKnobAngle: Single;
+//    function  GetKnobAngle: Single;
     function  GetKnobAngleScaled: Single;
     procedure DoSetKnobAngle(const AValue: Single);
     procedure DialMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Single);
@@ -316,11 +316,13 @@ begin
   SetKnobAngle((Theta) + (Pi * 0.5));
 end;
 
+{
 procedure TPDXRadialDial.SendMessage(const AMsg: String);
 begin
   if Assigned(FDoExtMessage) then
     FDoExtMessage(Self, AMsg);
 end;
+}
 
 procedure TPDXRadialDial.SetDoExtMessage(const AProc: TPDXMessageEvent);
 begin
@@ -359,9 +361,6 @@ end;
 { TArcDial }
 
 constructor TPDXArcDial.Create(AOwner: TComponent);
-var
-  I: Integer;
-  Item: TListBoxItem;
 begin
   inherited;
   if AOwner is TStyledControl then
@@ -497,12 +496,12 @@ begin
   FCaptionLabel.Text := FormatFloat('##0.000', RadToDeg(-KAS)) + #186;
   DoRotate(KAS);
 end;
-
+{
 function TPDXArcDial.GetKnobAngle: Single;
 begin
   Result := fKnobAngle;
 end;
-
+}
 procedure TPDXArcDial.MouseKnob(X, Y: Single);
 var
   OX, OY: Single;
@@ -513,12 +512,13 @@ begin
   Theta := arctan2(OY, OX);
   SetKnobAngle((Theta) + (Pi * 0.5));
 end;
-
+{
 procedure TPDXArcDial.SendMessage(const AMsg: String);
 begin
   if Assigned(FDoExtMessage) then
     FDoExtMessage(Self, AMsg);
 end;
+}
 
 procedure TPDXArcDial.SetDoExtMessage(const AProc: TPDXMessageEvent);
 begin

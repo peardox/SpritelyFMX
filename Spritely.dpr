@@ -1,5 +1,7 @@
 program Spritely;
 
+
+
 uses
   System.StartUpCopy,
   FMX.Forms,
@@ -12,7 +14,8 @@ uses
   SpritelyControls in 'src\SpritelyControls.pas',
   SpritelyDebug in 'src\SpritelyDebug.pas',
   SphericalCamera in 'src\SphericalCamera.pas',
-  SpritelyCheckTextures in 'src\SpritelyCheckTextures.pas';
+  SpritelyCheckTextures in 'src\SpritelyCheckTextures.pas',
+  SpritelyAxisGrid in 'src\SpritelyAxisGrid.pas';
 
 {$R *.res}
 

@@ -10,30 +10,90 @@
         <DeviceId Condition="'$(Platform)'=='iOSSimARM64'"/>
     </PropertyGroup>
     <ItemGroup Condition="'$(Platform)'=='OSX64'"/>
-    <ItemGroup Condition="'$(Platform)'=='Win32'">
-        <DeployFile Include="Win32\Debug\Spritely.exe" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Spritely\</RemoteDir>
-            <RemoteName>Spritely.exe</RemoteName>
-            <DeployClass>ProjectOutput</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-            <Required>True</Required>
-        </DeployFile>
-    </ItemGroup>
+    <ItemGroup Condition="'$(Platform)'=='Win32'"/>
     <ItemGroup Condition="'$(Platform)'=='Android64'"/>
     <ItemGroup Condition="'$(Platform)'=='Android'"/>
     <ItemGroup Condition="'$(Platform)'=='Win64'">
-        <DeployFile Include="Win64\Debug\Spritely.exe" Condition="'$(Config)'=='Debug'">
+        <DeployFile Include="Styles\MaterialOxfordBlue_Linux.style" Condition="'$(Config)'=='Release'">
             <RemoteDir>Spritely\</RemoteDir>
-            <RemoteName>Spritely.exe</RemoteName>
-            <DeployClass>ProjectOutput</DeployClass>
+            <RemoteName>MaterialOxfordBlue_Linux.style</RemoteName>
+            <DeployClass>ProjectFile</DeployClass>
             <Operation>0</Operation>
             <LocalCommand/>
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
-            <Required>True</Required>
+        </DeployFile>
+        <DeployFile Include="Styles\Win10ModernSlateGray.style" Condition="'$(Config)'=='Release'">
+            <RemoteDir>Spritely\</RemoteDir>
+            <RemoteName>Win10ModernSlateGray.style</RemoteName>
+            <DeployClass>ProjectFile</DeployClass>
+            <Operation>0</Operation>
+            <LocalCommand/>
+            <RemoteCommand/>
+            <Overwrite>True</Overwrite>
+        </DeployFile>
+        <DeployFile Include="Styles\Win10ModernBlue.Style" Condition="'$(Config)'=='Release'">
+            <RemoteDir>Spritely\</RemoteDir>
+            <RemoteName>Win10ModernBlue.Style</RemoteName>
+            <DeployClass>ProjectFile</DeployClass>
+            <Operation>0</Operation>
+            <LocalCommand/>
+            <RemoteCommand/>
+            <Overwrite>True</Overwrite>
+        </DeployFile>
+        <DeployFile Include="Styles\Win10ModernGreen.style" Condition="'$(Config)'=='Release'">
+            <RemoteDir>Spritely\</RemoteDir>
+            <RemoteName>Win10ModernGreen.style</RemoteName>
+            <DeployClass>ProjectFile</DeployClass>
+            <Operation>0</Operation>
+            <LocalCommand/>
+            <RemoteCommand/>
+            <Overwrite>True</Overwrite>
+        </DeployFile>
+        <DeployFile Include="Styles\Win10ModernDark.Style" Condition="'$(Config)'=='Release'">
+            <RemoteDir>Spritely\</RemoteDir>
+            <RemoteName>Win10ModernDark.Style</RemoteName>
+            <DeployClass>ProjectFile</DeployClass>
+            <Operation>0</Operation>
+            <LocalCommand/>
+            <RemoteCommand/>
+            <Overwrite>True</Overwrite>
+        </DeployFile>
+        <DeployFile Include="Styles\Win10Modern.Style" Condition="'$(Config)'=='Release'">
+            <RemoteDir>Spritely\</RemoteDir>
+            <RemoteName>Win10Modern.Style</RemoteName>
+            <DeployClass>ProjectFile</DeployClass>
+            <Operation>0</Operation>
+            <LocalCommand/>
+            <RemoteCommand/>
+            <Overwrite>True</Overwrite>
+        </DeployFile>
+        <DeployFile Include="data\KayKit\KayKit_Adventurers_1.0_FREE\Characters\gltf\knight_texture.png" Condition="'$(Config)'=='Release'">
+            <RemoteDir>Spritely\</RemoteDir>
+            <RemoteName>knight_texture.png</RemoteName>
+            <DeployClass>ProjectFile</DeployClass>
+            <Operation>0</Operation>
+            <LocalCommand/>
+            <RemoteCommand/>
+            <Overwrite>True</Overwrite>
+        </DeployFile>
+        <DeployFile Include="data\KayKit\KayKit_Adventurers_1.0_FREE\Characters\gltf\Knight.glb" Condition="'$(Config)'=='Release'">
+            <RemoteDir>Spritely\</RemoteDir>
+            <RemoteName>Knight.glb</RemoteName>
+            <DeployClass>ProjectFile</DeployClass>
+            <Operation>0</Operation>
+            <LocalCommand/>
+            <RemoteCommand/>
+            <Overwrite>True</Overwrite>
+        </DeployFile>
+        <DeployFile Include="Styles\Win10ModernPurple.style" Condition="'$(Config)'=='Release'">
+            <RemoteDir>Spritely\</RemoteDir>
+            <RemoteName>Win10ModernPurple.style</RemoteName>
+            <DeployClass>ProjectFile</DeployClass>
+            <Operation>0</Operation>
+            <LocalCommand/>
+            <RemoteCommand/>
+            <Overwrite>True</Overwrite>
         </DeployFile>
         <DeployFile Include="Win64\Release\Spritely.exe" Condition="'$(Config)'=='Release'">
             <RemoteDir>Spritely\</RemoteDir>
@@ -45,48 +105,18 @@
             <Overwrite>True</Overwrite>
             <Required>True</Required>
         </DeployFile>
+        <DeployFile Include="Styles\MaterialOxfordBlue_Win.style" Condition="'$(Config)'=='Release'">
+            <RemoteDir>Spritely\</RemoteDir>
+            <RemoteName>MaterialOxfordBlue_Win.style</RemoteName>
+            <DeployClass>ProjectFile</DeployClass>
+            <Operation>0</Operation>
+            <LocalCommand/>
+            <RemoteCommand/>
+            <Overwrite>True</Overwrite>
+        </DeployFile>
     </ItemGroup>
     <ItemGroup Condition="'$(Platform)'=='OSXARM64'"/>
-    <ItemGroup Condition="'$(Platform)'=='Linux64'">
-        <DeployFile Include="Linux64\Debug\Spritely" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Spritely\</RemoteDir>
-            <RemoteName>Spritely</RemoteName>
-            <DeployClass>ProjectOutput</DeployClass>
-            <Operation>1</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-            <Required>True</Required>
-        </DeployFile>
-        <DeployFile Include="Linux64\Release\Spritely" Condition="'$(Config)'=='Release'">
-            <RemoteDir>Spritely\</RemoteDir>
-            <RemoteName>Spritely</RemoteName>
-            <DeployClass>ProjectOutput</DeployClass>
-            <Operation>1</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-            <Required>True</Required>
-        </DeployFile>
-        <DeployFile Include="data\oblique.glb" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Spritely\data\</RemoteDir>
-            <RemoteName>oblique.glb</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
-        <DeployFile Include="Styles\MaterialOxfordBlue_Linux.style" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Spritely\Styles\</RemoteDir>
-            <RemoteName>MaterialOxfordBlue_Linux.style</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
-    </ItemGroup>
+    <ItemGroup Condition="'$(Platform)'=='Linux64'"/>
     <ItemGroup Condition="'$(Platform)'=='iOSDevice64'"/>
     <ItemGroup Condition="'$(Platform)'=='iOSSimARM64'"/>
 </Project>

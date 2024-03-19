@@ -2,13 +2,31 @@ unit SpritelyCheckTextures;
 
 interface
 
+uses System.Generics.Collections{, FMX.Types};
+
+
+type
+  TFileDirectory = class {(TFMXObject)}
+  private
+    fParentDir: String;
+    fSubDir: String;
+    fFileName: String;
+  public
+    constructor Create(const AParentDir: String; ASubDir: String; AFileName: String);
+    function GetFullFileName: String;
+    property ParentDir: String read fParentDir write fParentDir;
+    property SubDir: String read fSubDir write fSubDir;
+    property FileName: String read fFileName write fFileName;
+  end;
+
 procedure CheckGLTFTextures(const ADir: String);
+function ScanGLTFModels(const ADir: String): TObjectList<TFileDirectory>;
+function ScanOBJModels(const ADir: String): TObjectList<TFileDirectory>;
 
 implementation
 
 uses System.SysUtils,
   System.Variants,
-  System.Generics.Collections,
   System.Classes,
   CastleLog,
   System.JSON,
@@ -60,6 +78,79 @@ begin
   }
 end;
 
+procedure ScanModels(const ADir: String; const ASubDir: String; const AFileExt: TArray<String>; var AList: TObjectList<TFileDirectory>);
+var
+  sr: TSearchRec;
+  FileAttrs: Integer;
+  AFileSpec: String;
+  ASrch: String;
+  I: Integer;
+  DirItem: TFileDirectory;
+begin
+  {$IF DEFINED(MSWINDOWS)}
+  AFileSpec := '*.*';
+  {$ELSE}
+  AFileSpec := '*';
+  {$ENDIF}
+  FileAttrs := faAnyFile or faDirectory;
+  if ASubDir = String.Empty then
+    ASrch := ADir + TPath.DirectorySeparatorChar + AFileSpec
+  else
+    ASrch := ADir + TPath.DirectorySeparatorChar + ASubDir + TPath.DirectorySeparatorChar + AFileSpec;
+
+  if FindFirst(ASrch, FileAttrs, sr) = 0 then
+    begin
+    repeat
+      begin
+        if ((sr.Attr and faDirectory) <> faDirectory) then // Not a Directory
+          begin
+            for I := Low(AFileExt) to High(AFileExt) do
+              begin
+                if TPath.GetExtension(sr.Name) = AFileExt[I] then
+                  begin
+                    if ASubDir = String.Empty then
+                      DirItem := TFileDirectory.Create(ADir, '', sr.Name)
+                    else
+                      DirItem := TFileDirectory.Create(ADir, ASubDir, sr.Name);
+                    AList.Add(DirItem);
+                    break;
+                  end;
+              end;
+          end
+        else
+          begin
+            if (sr.Name <> '.') and (sr.Name <> '..')  then
+              begin
+                if ASubDir = String.Empty then
+                  ScanModels(ADir, sr.Name, AFileExt, AList)
+                else
+                  ScanModels(ADir, ASubDir + TPath.DirectorySeparatorChar + sr.Name, AFileExt, AList);
+              end;
+          end
+      end;
+    until FindNext(sr) <> 0;
+    FindClose(sr);
+    end;
+end;
+
+function ScanGLTFModels(const ADir: String): TObjectList<TFileDirectory>;
+var
+  TheList: TObjectList<TFileDirectory>;
+begin
+  TheList := TObjectList<TFileDirectory>.Create;
+  ScanModels(ADir, '', ['.gltf', '.glb'], TheList);
+  Result := TheList;
+end;
+
+function ScanOBJModels(const ADir: String): TObjectList<TFileDirectory>;
+var
+  TheList: TObjectList<TFileDirectory>;
+begin
+  TheList := TObjectList<TFileDirectory>.Create;
+  ScanModels(ADir, '', ['.obj'], TheList);
+  Result := TheList;
+end;
+
 procedure CheckGLTFTextures(const ADir: String);
 var
   sr: TSearchRec;
@@ -94,6 +185,25 @@ begin
     until FindNext(sr) <> 0;
     FindClose(sr);
     end;
+end;
+
+{ TFileDirectory }
+
+constructor TFileDirectory.Create(const AParentDir: String; ASubDir,
+  AFileName: String);
+begin
+  inherited Create;
+  fParentDir := AParentDir;
+  fSubDir := ASubDir;
+  fFileName := AFileName;
+end;
+
+function TFileDirectory.GetFullFileName: String;
+begin
+  if fSubDir = String.Empty then
+    Result := fParentDir + TPath.DirectorySeparatorChar + fFileName
+  else
+    Result := fParentDir + TPath.DirectorySeparatorChar + fSubDir + TPath.DirectorySeparatorChar + fFileName;
 end;
 
 end.

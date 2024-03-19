@@ -41,7 +41,7 @@ begin
   fCamera := TCastleCamera.Create(Self);
   fInclinationTransform.Add(fCamera);
   Add(fInclinationTransform);
-  fCamera.Translation := Vector3(0,0,2);
+  fCamera.Translation := Vector3(0,0,0);
   fPan := Vector2(0,0);
   fLookAt := Vector3(0,0,0);
 end;
@@ -85,22 +85,28 @@ var
   pPos, pDir, pUp, pSide: TVector3;
 begin
 //  WriteLnLog('Radius = ' + FloatToStr(ARadius) + ', Azi = ' + FloatToStr(AzimuthValue) + ', Inc = ' + FloatToStr(InclinationValue));
+//  if fCamera.ProjectionType = ptPerspective then
+    fCamera.Translation := Vector3(0, 0, ARadius);
+    // + fLookAt;
 
   Rotation := Vector4(0,1,0,AzimuthValue);
   fInclinationTransform.Rotation := Vector4(1,0,0,InclinationValue);
-  fCamera.Translation := Vector3(0, 0, ARadius) + fLookAt;
-  fCamera.Direction := fLookAt - fCamera.Translation;
-// fCamera.Scale := Vector3(1.5,1.5,1.5);
-{
-  fCamera.Position := Vector3(0, 0, ARadius);
-//  fCamera.Rotation := Vector4(0,1,0,AzimuthValue);
-//  fCamera.Rotation := fCamera.Rotation * Vector4(1,0,0,InclinationValue);
-  fCamera.Direction := fLookAt - fCamera.Translation;
-  WriteLnLog(Format('D = %s,T = %s,R =  %s,U = %s,A = %2.8f,I = %2.8f',[fCamera.Direction.ToString, fCamera.Translation.ToString, fCamera.Rotation.ToString, fCamera.Up.ToString,AzimuthValue,InclinationValue]));
-}
+  fCamera.Direction := -fCamera.Translation.Normalize;
+
   fCamera.GetWorldView(pPos, pDir, pUp);
   pSide := TVector3.CrossProduct(pDir, pUp);
   fCamera.SetWorldView(pPos + fPan.X * pSide + fPan.Y * pUp, pDir, pUp);
+
+//  WriteLnLog(Format('P = %s, D = %s, U =  %s, Pan = %8.6f, %8.6f',[pPos.ToString, pDir.ToString, pUp.ToString, fPan.X, fPan.Y]));
+
+{
+  Camera.SetWorldView(
+    Vector3(0, 0, Default2DCameraZ),
+    Vector3(0, 0, -1),
+    Vector3(0, 1, 0));
+}
+  fCamera.GravityUp := Vector3(0, 1, 0);
+//  fCamera.Translation := Vector3(0,0,0);
 end;
 
 

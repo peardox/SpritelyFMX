@@ -7,33 +7,16 @@ interface
 uses System.SysUtils, System.Types, System.UITypes, System.Classes, System.Generics.Collections,
   CastleDebugTransform, CastleColors,
   CastleScene, CastleQuaternions, CastleVectors,
+  SpritelyTypes,
   SpritelyDebug;
 
 type
-  TModelXAlign = (modelXLeft, modelXCenter, modelXRight, modelXDefined, modelXOrigin);
-  TModelYAlign = (modelYBottom, modelYCenter, modelYTop, modelYDefined, modelYOrigin);
-  TModelZAlign = (modelZBack, modelZCenter, modelZFront, modelZDefined, modelZOrigin);
-
-  TModelAlign = record
-    X: TModelXAlign;
-    Y: TModelYAlign;
-    Z: TModelZAlign;
-  end;
-
-  TModelInfo = record
-    Translation: TVector3;
-    Scale: TVector3;
-    Rotation: TVector4;
-    Size: TVector3;
-    Center: TVector3;
-  end;
-
   TModelPack = class;
 
   TGimbal = class(TComponent)
   private
-    fOffsetScale: TVector3;
-    fOffsetTranslation: TVector3;
+//    fOffsetScale: TVector3;
+//    fOffsetTranslation: TVector3;
     fOffsetRotation: TVector4;
     fScale: Single;
     fTranslation: TVector3;
@@ -71,12 +54,15 @@ type
     procedure ShowDebugBox(const AValue: Boolean);
     procedure SetDebugBoxColour(const AValue: TCastleColor);
     function GetInfo: TModelInfo;
+    function AlignTo(const OtherModel: TCastleModel; const Align: TModelAlign; const Pad: TVector3): TVector3;
     procedure LoadModel(filename: String);
     property Gimbal: TGimbal read fGimbal write fGimbal;
     property Align: TModelAlign read fAlign write fAlign;
     property DebugBox: TDebugTransformHexahedron read fDebugBox write fDebugBox;
     property HasDebugBox: Boolean read GetHasDebugBox;
   end;
+
+  TPDXModelEvent = procedure (Sender: TObject; const AModel: TCastleModel) of object;
 
   TModelPack = class(TComponent)
     fChildren: TObjectList<TCastleModel>;
@@ -150,14 +136,169 @@ begin
     fDebugBox.Exists := False;
 end;
 
+function TCastleModel.AlignTo(const OtherModel: TCastleModel;
+  const Align: TModelAlign; const Pad: TVector3): TVector3;
+var
+  newCenter, otherCenter, otherLoc, newSize, otherSize: TVector3;
+begin
+  if BoundingBox.IsEmptyOrZero then
+    begin
+      newSize := Vector3(0, 0, 0);
+      newCenter := Vector3(0, 0, 0);
+    end
+  else
+    begin
+//      WriteLnLog('Self Model = ' + Url);
+      newSize := Vector3(BoundingBox.Size.X / 2,
+                     BoundingBox.Size.Y / 2,
+                     BoundingBox.Size.Z / 2);
+      newCenter := Vector3(BoundingBox.Max.X - newSize.X,
+                     BoundingBox.Max.Y - newSize.Y,
+                     BoundingBox.Max.Z - newSize.Z);
+    end;
+
+  if not Assigned(OtherModel) then
+    begin
+      otherSize := Vector3(0, 0, 0);
+      otherCenter := Vector3(0, 0, 0);
+      otherLoc := Vector3(0, 0, 0);
+    end
+  else
+    begin
+      if OtherModel.BoundingBox.IsEmptyOrZero then
+        begin
+          otherSize := Vector3(0, 0, 0);
+          otherCenter := Vector3(0, 0, 0);
+          otherLoc := Vector3(0, 0, 0);
+        end
+      else
+        begin
+//          WriteLnLog('Other Model = ' + otherModel.Url);
+          otherSize := Vector3(OtherModel.BoundingBox.Size.X / 2,
+                         OtherModel.BoundingBox.Size.Y / 2,
+                         OtherModel.BoundingBox.Size.Z / 2);
+          otherCenter := Vector3(OtherModel.BoundingBox.Max.X - otherSize.X,
+                         OtherModel.BoundingBox.Max.Y - otherSize.Y,
+                         OtherModel.BoundingBox.Max.Z - otherSize.Z);
+          otherLoc := OtherModel.Translation;
+        end;
+    end;
+
+//  WriteLnLog('Other : Center = ' + otherCenter.ToString + ', Size = ' + otherSize.ToString + ', Loc = ' + otherLoc.ToString);
+//  WriteLnLog('Self  : Center = ' + newCenter.ToString + ', Size = ' + newSize.ToString);
+
+  Result := otherCenter +
+            Vector3(otherSize.X,
+                    -otherSize.Y,
+                    otherSize.Z) +
+            Vector3(-newSize.X,
+                    newSize.Y,
+                    newSize.Z) +
+            Pad;
+  // Left X, Bottom Y, Front Z
+
+{
+  Result := otherCenter +
+            Vector3(otherSize.X,
+                    -otherSize.Y,
+                    -otherSize.Z) +
+            Vector3(-newSize.X,
+                    newSize.Y,
+                    -newSize.Z) +
+            Pad;
+  // Left X, Bottom Y, Back Z
+
+  Result := otherCenter +
+            Vector3(-otherSize.X,
+                    -otherSize.Y,
+                    -otherSize.Z) +
+            Vector3(newSize.X,
+                    newSize.Y,
+                    -newSize.Z) +
+            Pad;
+  // Right X, Bottom Y, Back Z
+
+  Result := otherCenter +
+            Vector3(0,
+                    -otherSize.Y,
+                    -otherSize.Z) +
+            Vector3(0,
+                    newSize.Y,
+                    -newSize.Z) +
+            Pad;
+  // Center X, Bottom Y, Back Z
+
+  Result := otherCenter +
+            Vector3(otherSize.X,
+                    -otherSize.Y,
+                    otherSize.Z) +
+            Vector3(newSize.X,
+                    newSize.Y,
+                    -newSize.Z) +
+            Pad;
+  // Right X, Bottom Y, Front Z
+
+  Result := otherCenter +
+            Vector3(otherSize.X,
+                    -otherSize.Y,
+                    -otherSize.Z) +
+            Vector3(newSize.X,
+                    newSize.Y,
+                    newSize.Z) +
+            Pad;
+  // Right X, Bottom Y, Back Z
+
+  Result := otherCenter +
+            Vector3(otherSize.X,
+                    otherSize.Y,
+                    0) +
+            Vector3(newSize.X,
+                    -newSize.Y,
+                    0) +
+            Pad;
+  // Right X, Bottom Y, Center Z
+
+  Result := otherCenter +
+            Vector3(otherSize.X,
+                    -otherSize.Y,
+                    0) +
+            Vector3(newSize.X,
+                    newSize.Y,
+                    0) +
+            Pad;
+  // Right X, Bottom Y, Center Z
+
+  Result := otherCenter +
+            Vector3(otherSize.X,
+                    0,
+                    0) +
+            Vector3(newSize.X,
+                    0,
+                    0) +
+            Pad;
+
+  // Right X, Middle Y,Z
+  Result := otherCenter +
+            Vector3(-otherSize.X,
+                    0,
+                    0) +
+            Vector3(-newSize.X,
+                    0,
+                    0) +
+            Pad;
+  // Left X, Middle Y,Z
+}
+
+end;
+
 constructor TCastleModel.Create(AOwner: TComponent);
 begin
   inherited;
   fScale := 0.5;
   fAlign.X := modelXCenter;
-  fAlign.Y := modelYBottom;
+  fAlign.Y := modelYCenter;
   fAlign.Z := modelZCenter;
-  Normalize;
+//  Normalize;
   fGimbal := TGimbal.Create(Self);
   fDebugBox := Nil;
 end;
@@ -184,6 +325,7 @@ end;
 
 function TCastleModel.GetInfo: TModelInfo;
 begin
+  Result.Name := Self.Url;
   Result.Translation := Self.Translation;
   Result.Scale := Self.Scale;
   Result.Rotation := Self.Rotation;
@@ -244,7 +386,7 @@ end;
 
 function TCastleModel.Normalize: Boolean;
 var
-  BBMax: Single;
+//  BBMax: Single;
   CX, CY, CZ: Single;
   AScale: Single;
 begin
@@ -294,33 +436,17 @@ begin
                              NormalScale / BBMax,
                              NormalScale / BBMax);
             Result := True;
+            BBMax := Max(LocalBoundingBox.SizeX, LocalBoundingBox.SizeZ);
             }
 //            Translation := Vector3(0,0,0);
 
-            if Assigned(fGimbal) then
-              begin
-                BBMax := Max(LocalBoundingBox.SizeX, LocalBoundingBox.SizeZ);
-                AScale :=  NormalScale / BBMax;
-         //       AScale :=  BBMax / NormalScale;
-                Center := Vector3(CX, CY, CZ);
-                WriteLnLog('Set Center to ' + Center.ToString);
-                Scale := Vector3(AScale, AScale, AScale);
-                Translation := -BoundingBox.Center;
-//                fGimbal.Apply;
-                Result := True;
-              end
-            else
-              begin
-                Translation := -Center;
-                Center := Vector3(CX, CY, CZ);
-                BBMax := LocalBoundingBox.MaxSize;
-                Scale := Vector3(NormalScale / BBMax,
-                                 NormalScale / BBMax,
-                                 NormalScale / BBMax);
-                Result := True;
-              end;
-
-          end;
+              AScale :=  NormalScale;
+              Scale := Vector3(AScale, AScale, AScale);
+              Center := Vector3(CX, CY, CZ);
+              WriteLnLog('Set Center to ' + Center.ToString);
+              Translation := -BoundingBox.Center;
+              Result := True;
+        end;
       end;
     end;
 end;
@@ -371,8 +497,6 @@ end;
 { TModelPack }
 
 function TModelPack.AddModel(const AFileName: String): TCastleModel;
-var
-  AlignValue: TModelAlign;
 begin
   Result := AddModel(AFileName, ModelAlignYBottom);
 end;
@@ -400,7 +524,7 @@ begin
       except
         on E : Exception do
           begin
-            Raise Exception.Create('Error in LoadScene : ' + E.ClassName + ' - ' + E.Message);
+            Raise Exception.Create('Error in AddModel : ' + E.ClassName + ' - ' + E.Message);
            end;
       end;
     end;

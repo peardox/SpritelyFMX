@@ -5,22 +5,27 @@ interface
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Styles,
-  FMX.Controls.Presentation,
+  FMX.Controls.Presentation, FMX.StdActns,
+  System.Generics.Collections,
   CastleApp, FMX.Layouts, FMX.StdCtrls, FMX.Menus, FMX.Memo.Types,
   FMX.ScrollBox, FMX.Memo, FMX.TabControl, Fmx.CastleControl, System.Rtti,
   FMX.Grid.Style, FMX.Grid,
   CastleModel,
   SpritelyControls,
+  SpritelyCheckTextures,
   SpritelySettings,
-  SpritelyTypes, FMX.Objects, FMX.ListBox
+  SpritelyTypes, FMX.Objects, FMX.ListBox, FMX.ListView.Types,
+  FMX.ListView.Appearances, FMX.ListView.Adapters.Base, FMX.ListView,
+  FMX.TreeView
   ;
 
 type
+{
   TAxisButton = record
     AxisName: String;
     Control: TButton;
   end;
-
+}
   TForm1 = class(TForm)
     StyleBook1: TStyleBook;
     LayoutTop: TLayout;
@@ -34,7 +39,6 @@ type
     TabOutput: TTabItem;
     LayoutView: TLayout;
     LayoutLeft: TLayout;
-    Button1: TButton;
     Memo1: TMemo;
     Layout4: TLayout;
     View3D: TLayout;
@@ -47,16 +51,21 @@ type
     CameraRotationLayout: TLayout;
     CameraInclinationLayout: TLayout;
     Layout2D3D: TLayout;
-    ModelRotationLayout: TLayout;
     Label3D: TLabel;
     Switch3D: TSwitch;
-    CheckBox1: TCheckBox;
     StringGrid2: TStringGrid;
     StringColumn3: TStringColumn;
     StringColumn4: TStringColumn;
     MenuItem3: TMenuItem;
     mnuCheckGLTF: TMenuItem;
     mnuClear: TMenuItem;
+    cbxProjections: TComboBox;
+    MenuItem2: TMenuItem;
+    MenuItem4: TMenuItem;
+    MenuItem5: TMenuItem;
+    TreeView1: TTreeView;
+    Timer1: TTimer;
+    Button1: TButton;
     procedure FormCreate(Sender: TObject);
     procedure LayoutLeftResize(Sender: TObject);
     procedure Switch3DClick(Sender: TObject);
@@ -71,18 +80,23 @@ type
       Shift: TShiftState);
     procedure TabModelClick(Sender: TObject);
     procedure TabCameraClick(Sender: TObject);
-    procedure ModelMove(const OX, OY: Single);
-    procedure CheckBox1Change(Sender: TObject);
+    procedure ModelMove(const OX, OY, OZ: Single);
     procedure mnuCheckGLTFClick(Sender: TObject);
     procedure mnuClearClick(Sender: TObject);
+    procedure cbxProjectionsChange(Sender: TObject);
+    procedure MenuItem4Click(Sender: TObject);
+    procedure ListView1ItemClick(const Sender: TObject;
+      const AItem: TListViewItem);
+    procedure FormDestroy(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
   private
     { Private declarations }
     cameraAngle: TPDXRadialDial;
     cameraInclination: TPDXArcDial;
-    modelAngle: TPDXRadialDial;
     CastleControl: TCastleControl;
     CastleApp: TCastleApp;
     OutputSize: TUnitConfig;
+    TheFileList: TObjectList<TFileDirectory>;
     procedure NewModel(Sender: TObject; const AModel: TCastleModel);
     procedure LogTicker(Sender: TObject; const Msg: String);
     procedure RotateModel(Sender: TObject; const ARotation: Single);
@@ -92,6 +106,9 @@ type
     procedure UpdateCamInfo;
     procedure CastleClick(Sender: TObject);
     procedure CameraMove(const OX, OY: Single);
+    procedure LoadStyle(const AStyle: String = '');
+    procedure PopulateProjections;
+    procedure TreeViewItemClick(Sender: TObject);
   public
     { Public declarations }
   end;
@@ -99,13 +116,13 @@ type
 
 var
   Form1: TForm1;
-  DoneOne: Boolean;
 
 implementation
 
 uses
   Math,
-  SpritelyCheckTextures,
+  System.IOUtils,
+  CastleLog,
   CastleHelpers,
   CastleCameras,
   CastleTransform,
@@ -135,76 +152,78 @@ begin
     end;
 end;
 
-procedure TForm1.Button1Click(Sender: TObject);
-{
-var
-  E: TExtents;
-  model: TCastleModel;
-  d: TViewStats;
-  fc: Single;
-}
+procedure TForm1.cbxProjectionsChange(Sender: TObject);
 begin
-{
-  if Assigned(CastleApp.Stage) then
+  if Assigned(CastleApp) then
     begin
-      if CastleApp.Models.Kids.Count > 0 then
+      if (cbxProjections.ItemIndex >= 0) and (cbxProjections.ItemIndex < Length(SystemSettings.Projections)) then
         begin
-          fc := CastleApp.FitCam;
-        //  CastleApp.CamWidth := (fc * d.Box.View3D.Width);
-
-          Memo1.Lines.Clear;
-          Memo1.Lines.Add('Stats');
-          Memo1.Lines.Add('Zoom: ' + FloatToStr(CastleApp.Zoom));
-          d := CastleApp.GetAxis(CastleApp.Stage);
-          Memo1.Lines.Add('2DW: ' + d.Box.View2D.Width.ToString);
-          Memo1.Lines.Add('2DH: ' + d.Box.View2D.Height.ToString);
-          Memo1.Lines.Add('3DW: ' + d.Box.View3D.Width.ToString);
-          Memo1.Lines.Add('3DH: ' + d.Box.View3D.Height.ToString);
-          Memo1.Lines.Add('CtrH: ' + FloatToStr(CastleApp.Container.UnscaledHeight));
-          Memo1.Lines.Add('CtrW: ' + FloatToStr(CastleApp.Container.UnscaledWidth));
-          Memo1.Lines.Add('Stage');
-          E:=CastleApp.Viewport.CalcAngles(CastleApp.Stage);
-          Memo1.Lines.Add('OK  : ' + E.IsValid.ToString);
-          Memo1.Lines.Add('Min : ' + E.Min.ToString);
-          Memo1.Lines.Add('Max : ' + E.Max.ToString);
-          Memo1.Lines.Add('Size: ' + E.Size.ToString);
-          Memo1.Lines.Add('CamH: ' + FloatToStr(CastleApp.CamHeight));
-          Memo1.Lines.Add('CamW: ' + FloatToStr(CastleApp.CamWidth));
-          Memo1.Lines.Add('Scale: ' + CastleApp.Stage.Scale.ToString);
-          Memo1.Lines.Add('Pix : ' + E.Pixels.ToString);
+          cameraInclination.Angle := SystemSettings.Projections[cbxProjections.ItemIndex].Inclination;
+          cameraAngle.Angle := SystemSettings.Projections[cbxProjections.ItemIndex].Azimuth;
         end;
     end;
+end;
 
-
-//  cameraInclination.Angle := 0.81625;
- }
-  if not DoneOne then
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+  if Assigned(CastleApp) and CastleApp.IsReady then
     begin
-      cameraInclination.Angle := ((Pi/2) - 0.615088935); // True ISO
-//      cameraInclination.Angle := ((Pi/2) - (pi / 6)); // 2:1 ISO
-//      cameraInclination.Angle := ((Pi/2) - 0.955316618); // sqrt(2)
-//      cameraInclination.Angle := ((Pi/2) - 1.10714872); // (3/4)
-      cameraAngle.Angle := 0.785398185253143;
-      CastleApp.Zoom := 0.80544854304;
-      DoneOne := True;
+      CastleApp.FitViewToModel(CastleApp.Stage);
+      UpdateModelInfo;
     end;
 
 end;
 
-procedure TForm1.CheckBox1Change(Sender: TObject);
+procedure TForm1.PopulateProjections;
 var
-  model: TCastleModel;
+  Item: TListBoxItem;
+  I: Integer;
 begin
-  model := CastleApp.SelectedModel;
-  if model <> Nil then
-  begin
-    model.ShowDebugBox(CheckBox1.IsChecked);
-  end;
+  for I := 0 to Length(SystemSettings.Projections) - 1 do
+    begin
+      Item := TListBoxItem.Create(cbxProjections);
+      Item.Parent := cbxProjections;
+      Item.Text := SystemSettings.Projections[I].Name; // set projection
+    end;
+
+  if Length(SystemSettings.Projections) > 4 then
+    cbxProjections.ItemIndex := 4;
+end;
+
+
+procedure TForm1.LoadStyle(const AStyle: String = '');
+var
+  NewStyle: String;
+begin
+    NewStyle := '';
+    { Default to nothing }
+  if AStyle = EmptyStr then
+    begin
+     {$IF DEFINED(MSWINDOWS)}
+//      NewStyle := 'Styles/RubyGraphite.style';
+//      NewStyle := 'Styles/Radiant.Win.style';
+//      NewStyle := 'Styles/Vapor.Win.style';
+      NewStyle := '../../Styles/Win10ModernBlue.style';
+//      NewStyle := 'Styles/Sterling.Win.style';
+//      NewStyle := 'Styles/MaterialOxfordBlue_Win.style';
+//      NewStyle := 'Styles/Win10ModernDark.style';
+      {$ENDIF}
+      {$IF DEFINED(LINUX)}
+      NewStyle := 'Styles/MaterialOxfordBlue_Linux.style';
+      {$ENDIF}
+    end
+  else
+    NewStyle := AStyle;
+
+  if not(NewStyle = EmptyStr) and FileExists(NewStyle) then
+    begin
+      StyleBook1.UseStyleManager := True;
+      TStyleManager.SetStyleFromFile(NewStyle);
+    end;
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  DoneOne := False;
   OutputSize := UnitConfig(256, 256);
   CastleControl := TCastleControl.Create(View3D);
   CastleControl.Align := TAlignLayout.Client;
@@ -215,21 +234,7 @@ begin
   CastleApp.OnModel := NewModel;
   CastleControl.Container.View := CastleApp;
 
-  StyleBook1.UseStyleManager := True;
-//  TStyleManager.SetStyleFromFile('Styles/RubyGraphite.style');
-  {$IF DEFINED(MSWINDOWS)}
-  TStyleManager.SetStyleFromFile('Styles/Win10Modern.style');
-  {$ENDIF}
-  {$IF DEFINED(LINUX)}
-  TStyleManager.SetStyleFromFile('Styles/MaterialOxfordBlue_Linux.style');
-  {$ENDIF}
-
-//  TStyleManager.SetStyleFromFile('Styles/Radiant.Win.style');
-//  TStyleManager.SetStyleFromFile('Styles/Vapor.Win.style');
-//  TStyleManager.SetStyleFromFile('Styles/Win10ModernBlue.style');
-//  TStyleManager.SetStyleFromFile('Styles/Sterling.Win.style');
-//  TStyleManager.SetStyleFromFile('Styles/Win10ModernDark.style');
-//  TStyleManager.SetStyleFromFile('Styles/MaterialOxfordBlue_Win.style');
+  LoadStyle;
 
   if ReportMemoryLeaksOnShutdown then
     Caption := APPNAME + ' (ReportMemoryLeaksOnShutdown)'
@@ -238,9 +243,6 @@ begin
 
 //  CameraInclinationLayout.Height := CameraInclinationLayout.Width;
 
-  modelAngle := TPDXRadialDial.Create(ModelRotationLayout);
-  modelAngle.OnExtMessage := LogTicker;
-  modelAngle.OnRotate := RotateModel;
   cameraAngle := TPDXRadialDial.Create(CameraRotationLayout);
   cameraAngle.OnRotate := RotateCamera;
   cameraAngle.Steps := 360;
@@ -251,10 +253,15 @@ begin
   SwitchView;
 //  camAngle.Position.X := 0;
 //  camAngle.Position.Y := 100;
-  StringGrid1.RowCount := 11;
+  StringGrid1.RowCount := 14;
+  StringGrid1.Cells[0,0] := 'Extents X';
+  StringGrid1.Cells[0,1] := 'Extents Y';
+  StringGrid1.Cells[0,2] := 'Viewport';
+{
   StringGrid1.Cells[0,0] := 'Translation X';
   StringGrid1.Cells[0,1] := 'Translation Y';
   StringGrid1.Cells[0,2] := 'Translation Z';
+}
   StringGrid1.Cells[0,3] := 'Rotation Angle';
   StringGrid1.Cells[0,4] := 'Scale';
   StringGrid1.Cells[0,5] := 'Center X';
@@ -263,26 +270,41 @@ begin
   StringGrid1.Cells[0,8] := 'Size X';
   StringGrid1.Cells[0,9] := 'Size Y';
   StringGrid1.Cells[0,10] := 'Size Z';
+  StringGrid1.Cells[0,11] := 'Name';
+  StringGrid1.Cells[0,12] := 'Zoom';
+  StringGrid1.Cells[0,13] := 'FOV';
 
   StringGrid2.RowCount := 14;
   StringGrid2.Cells[0,0] := 'Stage X';
   StringGrid2.Cells[0,1] := 'Stage Y';
   StringGrid2.Cells[0,2] := 'Stage Z';
-  StringGrid2.Cells[0,3] := 'Middle X';
-  StringGrid2.Cells[0,4] := 'Middle Y';
-  StringGrid2.Cells[0,5] := 'Middle Z';
+  StringGrid2.Cells[0,3] := 'Direction X';
+  StringGrid2.Cells[0,4] := 'Direction Y';
+  StringGrid2.Cells[0,5] := 'Direction Z';
   StringGrid2.Cells[0,6] := 'Center X';
   StringGrid2.Cells[0,7] := 'Center Y';
   StringGrid2.Cells[0,8] := 'Center Z';
-  StringGrid2.Cells[0,9] := 'LookAt X';
-  StringGrid2.Cells[0,10] := 'LookAt Y';
-  StringGrid2.Cells[0,11] := 'LookAt Z';
+  StringGrid2.Cells[0,9] := 'Translation X';
+  StringGrid2.Cells[0,10] := 'Translation Y';
+  StringGrid2.Cells[0,11] := 'Translation Z';
   StringGrid2.Cells[0,12] := 'Azimuth';
   StringGrid2.Cells[0,13] := 'Inclination';
 
 
   UpdateModelInfo;
   UpdateCamInfo;
+
+  PopulateProjections;
+
+  Timer1.Enabled := True;
+  Timer1.Interval := 100;
+
+end;
+
+procedure TForm1.FormDestroy(Sender: TObject);
+begin
+  if Assigned(TheFileList) then
+    TheFileList.Free;
 end;
 
 procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word;
@@ -292,17 +314,25 @@ if TabControl2.ActiveTab = TabModel then
   begin
     case Key of
       37: begin // Left
-            ModelMove( -0.01,  0);
+            ModelMove( -0.01,     0,     0);
           end;
       38: begin // Up
-            ModelMove(  0, -0.01);
+            ModelMove(     0, -0.01,     0);
           end;
       39: begin // Right
-            ModelMove( +0.01,  0);
+            ModelMove( +0.01,     0,     0);
           end;
       40: begin //Down
-            ModelMove(  0, +0.01);
+            ModelMove(     0, +0.01,     0);
           end;
+      33: begin // PgUp
+            ModelMove(     0,     0, +0.01);
+          end;
+      34: begin // PgDn
+            ModelMove(     0,     0, -0.01);
+          end;
+      else
+        WriteLnLog('Key = ' + IntToStr(Key));
     end;
   end else if TabControl2.ActiveTab = TabCamera then
   begin
@@ -322,7 +352,8 @@ if TabControl2.ActiveTab = TabModel then
     end;
   end;
 
-//  UpdateCamInfo;
+  UpdateModelInfo;
+  UpdateCamInfo;
 
 end;
 
@@ -330,24 +361,41 @@ procedure TForm1.UpdateModelInfo;
 var
   inf: TModelInfo;
   model: TCastleModel;
+  V: TViewStats;
 begin
   model := CastleApp.SelectedModel;
   if model <> Nil then
   begin
-    CheckBox1.IsChecked := model.HasDebugBox;
-
+    if CastleApp.IsReady then
+      begin
+//        CastleApp.Stage.Center := Vector3(0,0,0);
+        V := CastleApp.GetAxis(model);
+        StringGrid1.Cells[1,0] := FormatFloat('###0.000', V.Box.View2D.Width);
+        StringGrid1.Cells[1,1] := FormatFloat('###0.000', V.Box.View2D.Height);
+        StringGrid1.Cells[1,2] := Format('%4f x %4f', [CastleControl.Width, CastleControl.Height]);
+        {
+        StringGrid1.Cells[1,5] := FormatFloat('###0.000', (V.Box.View2D.Width / 2) - V.Box.View2D.Left);
+        StringGrid1.Cells[1,6] := FormatFloat('###0.000', (V.Box.View2D.Height / 2) - V.Box.View2D.Top);
+        StringGrid1.Cells[1,7] := '';
+        }
+      end;
     inf := model.GetInfo;
-    StringGrid1.Cells[1,0] := FormatFloat('###0.000', inf.Translation.X);
-    StringGrid1.Cells[1,1] := FormatFloat('###0.000', inf.Translation.Y);
-    StringGrid1.Cells[1,2] := FormatFloat('###0.000', inf.Translation.Z);
+//    StringGrid1.Cells[1,0] := FormatFloat('###0.000', inf.Translation.X);
+//    StringGrid1.Cells[1,1] := FormatFloat('###0.000', inf.Translation.Y);
+//    StringGrid1.Cells[1,2] := FormatFloat('###0.000', inf.Translation.Z);
     StringGrid1.Cells[1,3] := FormatFloat('###0.000', inf.Rotation.W);
     StringGrid1.Cells[1,4] := FormatFloat('###0.000', inf.Scale.X);
+
     StringGrid1.Cells[1,5] := FormatFloat('###0.000', inf.Center.X * inf.Scale.X);
     StringGrid1.Cells[1,6] := FormatFloat('###0.000', inf.Center.Y * inf.Scale.X);
     StringGrid1.Cells[1,7] := FormatFloat('###0.000', inf.Center.Z * inf.Scale.X);
+
     StringGrid1.Cells[1,8] := FormatFloat('###0.000', inf.Size.X * inf.Scale.X);
     StringGrid1.Cells[1,9] := FormatFloat('###0.000', inf.Size.Y * inf.Scale.X);
     StringGrid1.Cells[1,10] := FormatFloat('###0.000', inf.Size.Z * inf.Scale.X);
+    StringGrid1.Cells[1,11] := TPath.GetFileNameWithoutExtension(inf.Name);
+    StringGrid1.Cells[1,12] := FormatFloat('###0.000', CastleApp.Zoom);
+    StringGrid1.Cells[1,13] := FormatFloat('###0.00', RadToDeg(CastleApp.FieldOfView));
   end;
 
 end;
@@ -367,29 +415,33 @@ begin
             StringGrid2.Cells[1,0] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.SizeX);
             StringGrid2.Cells[1,1] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.SizeY);
             StringGrid2.Cells[1,2] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.SizeZ);
-            StringGrid2.Cells[1,3] := FormatFloat('###0.000', CastleApp.Stage.Middle.X);
-            StringGrid2.Cells[1,4] := FormatFloat('###0.000', CastleApp.Stage.Middle.Y);
-            StringGrid2.Cells[1,5] := FormatFloat('###0.000', CastleApp.Stage.Middle.Z);
-            StringGrid2.Cells[1,6] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.Center.X);
-            StringGrid2.Cells[1,7] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.Center.Y);
-            StringGrid2.Cells[1,8] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.Center.Z);
-            StringGrid2.Cells[1,9] := FormatFloat('###0.000', CastleApp.Camera.LookAt.X);
-            StringGrid2.Cells[1,10] := FormatFloat('###0.000', CastleApp.Camera.LookAt.Y);
-            StringGrid2.Cells[1,11] := FormatFloat('###0.000', CastleApp.Camera.LookAt.Z);
+            StringGrid2.Cells[1,3] := FormatFloat('###0.000', CastleApp.Camera.Direction.X);
+            StringGrid2.Cells[1,4] := FormatFloat('###0.000', CastleApp.Camera.Direction.Y);
+            StringGrid2.Cells[1,5] := FormatFloat('###0.000', CastleApp.Camera.Direction.Z);
+            StringGrid2.Cells[1,6] := FormatFloat('###0.000', CastleApp.Camera.Center.X);
+            StringGrid2.Cells[1,7] := FormatFloat('###0.000', CastleApp.Camera.Center.Y);
+            StringGrid2.Cells[1,8] := FormatFloat('###0.000', CastleApp.Camera.Center.Z);
+            StringGrid2.Cells[1,9] := FormatFloat('###0.000', CastleApp.Camera.Translation.X);
+            StringGrid2.Cells[1,10] := FormatFloat('###0.000', CastleApp.Camera.Translation.Y);
+            StringGrid2.Cells[1,11] := FormatFloat('###0.000', CastleApp.Camera.Translation.Z);
           end;
         StringGrid2.Cells[1,12] := FormatFloat('###0.000', CastleApp.Azimuth);
         StringGrid2.Cells[1,13] := FormatFloat('###0.000', CastleApp.Inclination);
       end;
   end;
 end;
+
 procedure TForm1.LayoutLeftResize(Sender: TObject);
 begin
 //  Button1.Height := 0;
 
-  Memo1.Height := LayoutLeft.Height - Button1.Height;
+  Memo1.Height := 0; // LayoutLeft.Height - ListView1.Height;
   Memo1.Width := LayoutLeft.Width;
-  Button1.Position.X := (Memo1.Width - Button1.Width) / 2;
-  Button1.Position.Y := Memo1.Height;
+  TreeView1.Height := {800; //} LayoutLeft.Height;
+  TreeView1.Width := LayoutLeft.Width;
+//  ListView1.Position.X := 0;
+//  ListView1.Position.Y := Treeview1.Height + Memo1.Height;
+//  ListView1.Height := LayoutLeft.Height - Memo1.Height;
 end;
 
 procedure TForm1.LayoutViewMouseWheel(Sender: TObject; Shift: TShiftState;
@@ -405,6 +457,8 @@ begin
   if WheelDelta < 0 then
     CastleApp.ZoomIn(factor);
  // Button1Click(Self);
+  UpdateModelInfo;
+  UpdateCamInfo;
 end;
 
 procedure TForm1.LayoutViewResize(Sender: TObject);
@@ -424,10 +478,69 @@ begin
     end;
 end;
 
+{$O-}
+procedure TForm1.ListView1ItemClick(const Sender: TObject;
+  const AItem: TListViewItem);
+var
+  fn: String;
+  f: TFileDirectory;
+begin
+  if (AItem.Tag >= 0) and (AItem.Tag < TheFileList.Count) then
+    begin
+      f := TheFileList.Items[AItem.Tag];
+      fn := f.GetFullFileName;
+      if FileExists(fn) then
+        begin
+          if ReportMemoryLeaksOnShutdown then
+            Caption := APPNAME + ': ' + fn + ' (ReportMemoryLeaksOnShutdown)'
+          else
+            Caption := APPNAME + ': ' + fn;
+          CastleApp.AddModel(fn);
+        end;
+    end;
+end;
+{$O+}
+
 procedure TForm1.LogTicker(Sender: TObject; const Msg: String);
 begin
 //  Memo1.Lines.Clear;
   Memo1.Lines.Add(Msg);
+end;
+
+procedure TForm1.MenuItem4Click(Sender: TObject);
+var
+  SelDir: String;
+  I: Integer;
+  TItem: TTreeViewItem;
+  GItem: TTreeViewItem;
+begin
+  if SelectDirectory('Check GLTF models (recursively)', SystemSettings.SearchDir, SelDir) then
+    begin
+      if ReportMemoryLeaksOnShutdown then
+        Caption := APPNAME + ': Scanning ' + SelDir + ' (ReportMemoryLeaksOnShutdown)'
+      else
+        Caption := APPNAME + ': Scanning ' + SelDir;
+      TreeView1.BeginUpdate;
+      GItem := TTreeViewItem.Create(Self);
+      GItem.Text := 'Pack';
+      TheFileList := ScanGLTFModels(SelDir);
+      for I := 0 to TheFileList.Count - 1 do
+        begin
+          TItem := TTreeViewItem.Create(Self);
+          TItem.TagObject := TheFileList.Items[I];
+          TItem.Text := TPath.GetFileNameWithoutExtension(TheFileList.Items[I].FileName);
+          TItem.Parent := GItem;
+          TItem.OnClick := TreeViewItemClick;
+        end;
+      if GItem.Count > 0 then
+        begin
+          GItem.Parent := TreeView1;
+          GItem.Expand;
+        end
+      else
+        GItem.Free;
+      TreeView1.EndUpdate;
+    end;
 end;
 
 procedure TForm1.mnuLoadClick(Sender: TObject);
@@ -455,8 +568,6 @@ begin
         Caption := APPNAME + ': Scanning ' + SelDir + ' (ReportMemoryLeaksOnShutdown)'
       else
         Caption := APPNAME + ': Scanning ' + SelDir;
-//      CastleApp.AddModel(OpenDialog1.FileName);
-//      SystemSettings.LastModel := OpenDialog1.FileName;
       CheckGLTFTextures(SelDir);
       SystemSettings.SearchDir := SelDir;
 
@@ -469,7 +580,7 @@ begin
     CastleApp.RemoveModels;
 end;
 
-procedure TForm1.ModelMove(const OX, OY: Single);
+procedure TForm1.ModelMove(const OX, OY, OZ: Single);
 var
   model: TCastleModel;
 begin
@@ -478,7 +589,7 @@ begin
     model := CastleApp.SelectedModel;
     if model <> Nil then
     begin
-      model.Translation := model.Translation + Vector3(OX,0,OY);
+      model.Translation := model.Translation + Vector3(OX,OZ,OY);
       UpdateModelInfo;
     end;
   end;
@@ -496,21 +607,19 @@ end;
 procedure TForm1.NewModel(Sender: TObject; const AModel: TCastleModel);
 begin
   UpdateModelInfo;
+//  CastleApp.ResizeView;
+  UpdateCamInfo;
 end;
 
 procedure TForm1.InclineCamera(Sender: TObject; const ARotation: Single);
 begin
   CastleApp.Inclination := ARotation;
-//  Memo1.Lines.Clear;
-//  Memo1.Lines.Add('Inc = ' + FloatToStr(ARotation));
   UpdateCamInfo;
 end;
 
 procedure TForm1.RotateCamera(Sender: TObject; const ARotation: Single);
 begin
   CastleApp.Azimuth := ARotation;
-//  Memo1.Lines.Clear;
-//  Memo1.Lines.Add('Azi = ' + FloatToStr(ARotation));
   UpdateCamInfo;
 end;
 
@@ -555,6 +664,8 @@ begin
       Label3D.Text := '2D';
     end;
   CastleApp.SwitchView3D(Switch3D.IsChecked);
+  UpdateModelInfo;
+  UpdateCamInfo;
 end;
 
 procedure TForm1.TabCameraClick(Sender: TObject);
@@ -567,6 +678,42 @@ procedure TForm1.TabModelClick(Sender: TObject);
 begin
   CastleControl.SetFocus;
   UpdateModelInfo;
+end;
+
+procedure TForm1.Timer1Timer(Sender: TObject);
+begin
+  if Assigned(CastleApp) and CastleApp.IsReady then
+    begin
+      NewModel(Self, Nil);
+      Timer1.Enabled := False;
+    end;
+end;
+
+procedure TForm1.TreeViewItemClick(Sender: TObject);
+var
+  TItem: TTreeViewItem;
+  Obj: TObject;
+  FI: TFileDirectory;
+  fn: String;
+begin
+  if Sender is TTreeViewItem then
+    begin
+      TItem := Sender as TTreeViewItem;
+      Obj := TItem.TagObject; // TFileDirectory
+      if Obj is TFileDirectory then
+        begin
+          FI := Obj as TFileDirectory;
+          fn := FI.GetFullFileName;
+          if FileExists(fn) then
+            begin
+              if ReportMemoryLeaksOnShutdown then
+                Caption := APPNAME + ': ' + fn + ' (ReportMemoryLeaksOnShutdown)'
+              else
+                Caption := APPNAME + ': ' + fn;
+              CastleApp.AddModel(fn);
+            end;
+        end;
+    end;
 end;
 
 end.

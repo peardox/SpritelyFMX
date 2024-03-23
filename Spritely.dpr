@@ -3,6 +3,7 @@ program Spritely;
 
 
 uses
+  FastMM4 in 'FastMM4.pas',
   System.StartUpCopy,
   FMX.Forms,
   MainGui in 'src\MainGui.pas' {Form1},
@@ -15,7 +16,9 @@ uses
   SpritelyDebug in 'src\SpritelyDebug.pas',
   SphericalCamera in 'src\SphericalCamera.pas',
   SpritelyCheckTextures in 'src\SpritelyCheckTextures.pas',
-  SpritelyAxisGrid in 'src\SpritelyAxisGrid.pas';
+  SpritelyAxisGrid in 'src\SpritelyAxisGrid.pas',
+  FrameToImage in 'src\FrameToImage.pas',
+  LoadingForm in 'src\LoadingForm.pas' {frmLoadingDialog};
 
 {$R *.res}
 

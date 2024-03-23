@@ -17,14 +17,15 @@ type
     fName: String;
     fAzimuth: Single;
     fInclination: Single;
+	fStretch: Single;
   public
-    constructor Create(const AName: String; const AInclination: Single; AAzimuth: Single);
+    constructor Create(const AName: String; const AInclination: Single; AAzimuth: Single; AStretch: Single);
     destructor Destroy; override;
     property Name: String read fName write fName;
     property Azimuth: Single read fAzimuth write fAzimuth;
     property Inclination: Single read fInclination write fInclination;
+  	property Stretch: Single read fStretch write fStretch;
   end;
-
   TProjectionArray = TArray<TProjection>;
 
   TPDXSettings = class
@@ -44,6 +45,7 @@ type
     {$endif}
   private
     procedure CreateProjections;
+    procedure SetDefaults;
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -60,6 +62,7 @@ const
 implementation
 
 uses
+  Math,
   CastleGLUtils,
   JSON.Serializers;
 
@@ -116,9 +119,15 @@ begin
     end
   else
     begin
+      SetDefaults;
       Save;
     end;
 
+end;
+
+procedure TPDXSettings.SetDefaults;
+begin
+  CreateProjections;
 end;
 
 procedure TPDXSettings.Load;
@@ -128,10 +137,10 @@ var
   JsonText: String;
   LastVersion: String;
   I: Integer;
-  Proj: TProjection;
   AName: String;
   AInclination: Single;
   AAzimuth: Single;
+  AStretch: Single;
 begin
   try
     JsonText := TFile.ReadAllText(IncludeTrailingPathDelimiter(AppHome) + 'Settings.json');
@@ -151,28 +160,39 @@ begin
       jobj.TryGetValue('SaveToDir', SaveToDir);
       jobj.TryGetValue('SearchDir', SearchDir);
       jobj.TryGetValue('LastModel', LastModel);
-      jobj.TryGetValue('Projections', jarr);
-      if jarr.Count > 0 then
+      if(jobj.TryGetValue('Projections', jarr)) then
         begin
-          SetLength(Projections, jarr.Count);
-          for I := 0 to jarr.Count - 1 do
+          if jarr.Count > 0 then
             begin
-              try
-                jobj2 := jarr[I] as TJSONObject;
-                jobj2.TryGetValue('fName', AName);
-                jobj2.TryGetValue('fInclination', AInclination);
-                jobj2.TryGetValue('fAzimuth', AAzimuth);
-                Projections[I] := TProjection.Create(AName, AInclination, AAzimuth);
-              except
-               on E : Exception do
-                 Raise Exception.Create('Load Projection Settings - Exception : Class = ' +
-                  E.ClassName + ', Message = ' + E.Message);
-              end;
+              SetLength(Projections, jarr.Count);
+              for I := 0 to jarr.Count - 1 do
+                begin
+                  try
+                    jobj2 := jarr[I] as TJSONObject;
+                    jobj2.TryGetValue('fName', AName);
+                    jobj2.TryGetValue('fInclination', AInclination);
+                    jobj2.TryGetValue('fAzimuth', AAzimuth);
+                    jobj2.TryGetValue('fStretch', AStretch);
+                    Projections[I] := TProjection.Create(AName, AInclination, AAzimuth, AStretch);
+                  except
+                   on E : Exception do
+                     Raise Exception.Create('Load Projection Settings - Exception : Class = ' +
+                      E.ClassName + ', Message = ' + E.Message);
+                  end;
+                end;
             end;
+          end;
+
+      if not Assigned(Projections) then
+        begin
+          CreateProjections;
         end
       else
         begin
-          CreateProjections;
+          if Length(Projections) = 0 then
+            begin
+              CreateProjections;
+            end;
         end;
 
       if AppVersion = LastVersion then
@@ -220,17 +240,22 @@ end;
 
 procedure TPDXSettings.CreateProjections;
 const
-  ProjCount = 8;
+  ProjCount = 12;
 begin
   SetLength(Projections, ProjCount);
-  Projections[0] := TProjection.Create('Head On', (Pi/2), 0);
-  Projections[1] := TProjection.Create('Top Down', 0, 0);
-  Projections[2] := TProjection.Create('Right', (Pi/2),(Pi/2));
-  Projections[3] := TProjection.Create('Left', -(Pi/2),(Pi/2));
-  Projections[4] := TProjection.Create('True Isometric', ((Pi/2) - 0.615088935), 0.785398185253143);
-  Projections[5] := TProjection.Create('Pixel Isometric', ((Pi/2) - (pi / 6)), 0.785398185253143);
-  Projections[6] := TProjection.Create('Root 2', ((Pi/2) - 0.955316618), 0.785398185253143);
-  Projections[7] := TProjection.Create('3/4 View', ((Pi/2) - 1.10714872), 0.785398185253143);
+                                    // Name, Azimuth, Inclination
+  Projections[0] := TProjection.Create('Front', (Pi/2), 0, 1);
+  Projections[1] := TProjection.Create('Top Down', 0, 0, 1);
+  Projections[2] := TProjection.Create('Pixel Isometric', ((Pi/2) - (pi / 6)), 0.785398185253143, 1);
+  Projections[3] := TProjection.Create('True Isometric', ((Pi/2) - 0.615088935), 0.785398185253143, 1);
+  Projections[4] := TProjection.Create('45 Deg', ((Pi/2) - (pi / 4)), 0.785398185253143, 1);
+  Projections[5] := TProjection.Create('Root 2', ((Pi/2) - 0.955316618), 0.785398185253143, 1);
+  Projections[6] := TProjection.Create('3/4 View', ((Pi/2) - 1.10714872), 0.785398185253143, 1);
+  Projections[7] := TProjection.Create('Military', ((Pi/2) - 1.10714872), 0.785398185253143, 0.81625);
+  Projections[8] := TProjection.Create('Back', Pi/2, Pi, 1);
+  Projections[9] := TProjection.Create('Right', Pi/2, -Pi/2, 1);
+  Projections[10] := TProjection.Create('Left', Pi/2, Pi/2, 1);
+  Projections[11] := TProjection.Create('Bottom Up', Pi, 0, 1);
 end;
 
 
@@ -254,11 +279,12 @@ end;
 
 { TProjection }
 
-constructor TProjection.Create(const AName: String; const AInclination: Single; AAzimuth: Single);
+constructor TProjection.Create(const AName: String; const AInclination: Single; AAzimuth: Single; AStretch: Single);
 begin
   fName := AName;
   fInclination := AInclination;
   fAzimuth := AAzimuth;
+  fStretch := AStretch; 
 end;
 
 destructor TProjection.Destroy;

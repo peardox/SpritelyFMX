@@ -4,10 +4,8 @@ interface
 
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
-  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
-  FMX.Controls.Presentation,
-  fmx.castlecontrol, CastleUIControls, CastleVectors,
-  CastleGLUtils, CastleColors, FMX.Layouts,
+  CastleUIControls, CastleVectors,
+  CastleGLUtils, CastleColors,
   CastleViewport,
   CastleTransform,
   CastleDebugTransform,
@@ -38,7 +36,7 @@ type
     fCamera: TSphericalCamera;
     fAzimuth: Single;
     fInclination: Single;
-    CameraLight: TCastleDirectionalLight;
+    fCameraLight: TCastleDirectionalLight;
     fViewport: TCastleViewport;
     fModels: TModelPack;
     FDoExtMessage: TPDXMessageEvent;
@@ -53,7 +51,7 @@ type
     procedure SendMessage(const AMsg: String);
     procedure SetDoExtMessage(const AProc: TPDXMessageEvent);
     procedure SetDoOnModel(const AProc: TPDXModelEvent);
-    function CreateDirectionalLight(LightPos: TVector3): TCastleDirectionalLight;
+//    function CreateDirectionalLight(LightPos: TVector3): TCastleDirectionalLight;
     procedure DoOnModel(const AModel: TCastleModel);
     procedure LoadViewport;
     function GetSelectedModel: TCastleModel;
@@ -63,12 +61,14 @@ type
     procedure SetZoom(const AValue: Single);
     function GetFOV: Single;
     procedure SetFOV(const AValue: Single);
+    procedure StageApplyBox;
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure SwitchView3D(const Use3D: Boolean);
-    procedure AddModel(const AFilename: String);
+    function AddModel(const AFilename: String): TCastleModel;
+    function CloneModel(const AModel: TCastleModel): TCastleModel;
     procedure RemoveModel(const AModel: TCastleModel);
     procedure RemoveModels;
     procedure ResizeView;
@@ -96,6 +96,8 @@ type
 
   end;
 
+const
+  DEFAULT_MODEL: String = 'castle-data:/up.glb';
 
 implementation
 
@@ -103,6 +105,7 @@ uses
   Math,
   X3DLoad,
   CastleLog,
+  CastleUriUtils,
   CastleRectangles,
   SpritelySettings,
   CastleProjection;
@@ -133,6 +136,16 @@ begin
     begin
       model := fModels.AddModel(SystemSettings.LastModel);
       fStage.Add(model);
+      fAxis.SetGround(model);
+      model.SelectModel;
+      DoOnModel(model);
+      FitViewToModel(model);
+    end
+  else if UriFileExists(DEFAULT_MODEL) then
+    begin
+      model := fModels.AddModel(DEFAULT_MODEL);
+      fStage.Add(model);
+      fAxis.SetGround(model);
       model.SelectModel;
       DoOnModel(model);
       FitViewToModel(model);
@@ -218,9 +231,17 @@ begin
     end;
 end;
 
-procedure TCastleApp.LoadViewport;
+procedure TCastleApp.StageApplyBox;
 var
   bb: TDebugTransformBox;
+begin
+  bb := TDebugTransformBox.Create(Self);
+  bb.Parent := fStage;
+  bb.BoxColor := Orange;
+  bb.Exists := True;
+end;
+
+procedure TCastleApp.LoadViewport;
 begin
   fViewport := TCastleViewport.Create(Self);
   fViewport.FullSize := False;
@@ -246,22 +267,18 @@ begin
 }
 
   fStage := TCastleModel.Create(Self);
-  bb := TDebugTransformBox.Create(Self);
-  bb.Parent := fStage;
-  bb.BoxColor := Orange;
-  bb.Exists := True;
+  StageApplyBox;
 
   fUniverse.Add(fStage);
 
   fViewport.Items.Add(fUniverse);
-//  fViewport.Items.Add(fStage);
 
   fCamera := TSphericalCamera.Create(fViewport);
   fCamera.ProjectionType := ptOrthographic;
   fCamera.Orthographic.Origin := Vector2(0.5, 0.5);
 
-  CameraLight := CreateDirectionalLight(Vector3(0,0,1));
-  fCamera.Camera.Add(CameraLight);
+  fCameraLight := CreateDirectionalLight(Self, Vector3(0,0,1));
+  fCamera.Camera.Add(fCameraLight);
 
   fViewport.Items.Add(fCamera);
   fViewport.Camera := fCamera.Camera;
@@ -287,16 +304,18 @@ begin
 end;
 
 
-procedure TCastleApp.AddModel(const AFilename: String);
+function TCastleApp.AddModel(const AFilename: String): TCastleModel;
 var
   model: TCastleModel;
 begin
+  model := Nil;
   if Assigned(fStage) and Assigned(fModels) and FileExists(AFilename) then
     begin
       if not fStageMultipleModels then
         begin
           fStage.Clear;
           fSelectedModel := Nil;
+          StageApplyBox;
         end;
       model := fModels.AddModel(AFilename);
       if fStageMultipleModels and not model.BoundingBox.IsEmptyOrZero then
@@ -306,23 +325,54 @@ begin
       fStage.Add(model);
       model.SelectModel;
       if not fStageMultipleModels then
-        FitViewToModel(model)
+        begin
+          fAxis.SetGround(model);
+          FitViewToModel(fStage);
+        end
       else
-        FitViewToModel(fStage);
+        begin
+          fAxis.SetGround(fStage);
+          FitViewToModel(fStage);
+        end;
     end;
+  Result := model;
 end;
 
-function TCastleApp.CreateDirectionalLight(LightPos: TVector3): TCastleDirectionalLight;
+function TCastleApp.CloneModel(const AModel: TCastleModel): TCastleModel;
 var
-  Light: TCastleDirectionalLight;
+  model: TCastleModel;
 begin
-  Light := TCastleDirectionalLight.Create(Self);
+  Result := Nil;
+  if Assigned(fStage) and Assigned(AModel) then
+    begin
+      if not fStageMultipleModels then
+        begin
+          fStage.Clear;
+          fSelectedModel := Nil;
+          StageApplyBox;
+        end;
 
-  Light.Direction := LightPos;
-  Light.Color := Vector3(1, 1, 1);
-  Light.Intensity := 1;
-
-  Result := Light;
+      model := AModel.Clone(Self) as TCastleModel;
+      model.UpdateModel(AModel);
+      model.Normalize;
+      Result := model;
+      if fStageMultipleModels and not model.BoundingBox.IsEmptyOrZero then
+        begin
+          model.Translation := model.Translation + model.AlignTo(FSelectedModel, ModelAlignYBottom, Vector3(0,0,0));
+        end;
+      fStage.Add(model);
+      model.SelectModel;
+      if not fStageMultipleModels then
+        begin
+          fAxis.SetGround(model);
+          FitViewToModel(fStage);
+        end
+      else
+        begin
+          fAxis.SetGround(fStage);
+          FitViewToModel(fStage);
+        end;
+    end;
 end;
 
 procedure TCastleApp.DeselectModels;

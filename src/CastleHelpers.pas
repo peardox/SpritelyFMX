@@ -17,10 +17,27 @@ type
     function WorldToViewport(AModel: TCastleModel; AVec: TVector3): TVector2; overload;
   end;
 
+function CreateDirectionalLight(const AOwner: TComponent; const LightPos: TVector3): TCastleDirectionalLight; overload;
+function SummariseModel(const AFilename: String): TModelInfo;
 
 implementation
 
 uses Math, CastleLog;
+
+function SummariseModel(const AFilename: String): TModelInfo;
+var
+  model: TCastleModel;
+begin
+  model := TCastleModel.Create(Nil);
+  model.LoadModel(AFilename, False);
+  if Assigned(model) then
+    begin
+      Result := model.CreateInfo;
+    end
+  else
+    Result := Nil;
+//  model.Free;
+end;
 
 function TCastleViewportHelper.CalcAngles(const AScene: TCastleModel): TExtents;
 var
@@ -99,5 +116,19 @@ begin
       Container.UnscaledHeight * ((AVec.Y * AModel.NormalScale) + Camera.Orthographic.Origin.Y)
     )
 end;
+
+function CreateDirectionalLight(const AOwner: TComponent; const LightPos: TVector3): TCastleDirectionalLight;
+var
+  Light: TCastleDirectionalLight;
+begin
+  Light := TCastleDirectionalLight.Create(AOwner);
+
+  Light.Direction := LightPos;
+  Light.Color := Vector3(1, 1, 1);
+  Light.Intensity := 1;
+
+  Result := Light;
+end;
+
 
 end.

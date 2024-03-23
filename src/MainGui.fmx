@@ -3,7 +3,7 @@ object Form1: TForm1
   Top = 0
   Caption = 'FMXTest'
   ClientHeight = 1024
-  ClientWidth = 1437
+  ClientWidth = 1438
   StyleBook = StyleBook1
   FormFactor.Width = 320
   FormFactor.Height = 480
@@ -21,7 +21,7 @@ object Form1: TForm1
   end
   object LayoutTop: TLayout
     Align = Top
-    Size.Width = 1437.000000000000000000
+    Size.Width = 1438.000000000000000000
     Size.Height = 8.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 3
@@ -30,7 +30,7 @@ object Form1: TForm1
   object MainMenu1: TMainMenu
     Left = 448
     Top = 416
-    object MenuItem1: TMenuItem
+    object mnuFile: TMenuItem
       Text = 'File'
       object mnuLoad: TMenuItem
         Locked = True
@@ -42,26 +42,36 @@ object Form1: TForm1
         Text = 'Clear Stage'
         OnClick = mnuClearClick
       end
-      object MenuItem2: TMenuItem
+      object mnuDirectory: TMenuItem
         Locked = True
         Text = 'Directory'
-        object MenuItem4: TMenuItem
+        object mnuGLTFDir: TMenuItem
           Locked = True
           Text = 'Scan GLTF Pack(s)'
-          OnClick = MenuItem4Click
+          OnClick = mnuGLTFDirClick
         end
-        object MenuItem5: TMenuItem
+        object mnuOBJDir: TMenuItem
           Locked = True
           Text = 'Scan OBJ Pack(s)'
         end
       end
+      object mnuSaveImage: TMenuItem
+        Locked = True
+        Text = 'Save Image'
+        OnClick = mnuSaveImageClick
+      end
     end
-    object MenuItem3: TMenuItem
+    object mnuUtilities: TMenuItem
       Text = 'Utilities'
       object mnuCheckGLTF: TMenuItem
         Locked = True
         Text = 'Check GLTFs'
         OnClick = mnuCheckGLTFClick
+      end
+      object mnuCheckMem: TMenuItem
+        Locked = True
+        Text = 'Check Memory'
+        OnClick = mnuCheckMemClick
       end
     end
   end
@@ -72,7 +82,7 @@ object Form1: TForm1
   object StatusBar1: TStatusBar
     Position.Y = 1002.000000000000000000
     ShowSizeGrip = True
-    Size.Width = 1437.000000000000000000
+    Size.Width = 1438.000000000000000000
     Size.Height = 22.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 1
@@ -80,7 +90,7 @@ object Form1: TForm1
   end
   object TabControl1: TTabControl
     Align = Client
-    Size.Width = 1437.000000000000000000
+    Size.Width = 1438.000000000000000000
     Size.Height = 994.000000000000000000
     Size.PlatformDefault = False
     TabIndex = 0
@@ -88,9 +98,9 @@ object Form1: TForm1
     TabStop = False
     TabPosition = PlatformDefault
     Sizes = (
-      1437s
+      1438s
       968s
-      1437s
+      1438s
       968s)
     object TabProject: TTabItem
       CustomIcon = <
@@ -109,7 +119,7 @@ object Form1: TForm1
       ExplicitSize.cy = 26.000000000000000000
       object LayoutView: TLayout
         Align = Client
-        Size.Width = 957.000000000000000000
+        Size.Width = 958.000000000000000000
         Size.Height = 968.000000000000000000
         Size.PlatformDefault = False
         TabOrder = 2
@@ -153,13 +163,22 @@ object Form1: TForm1
           Size.Height = 240.000000000000000000
           Size.PlatformDefault = False
           TabOrder = 0
+          Images = ImageList1
           Viewport.Width = 236.000000000000000000
           Viewport.Height = 236.000000000000000000
+        end
+        object LayoutPreview: TLayout
+          Align = Bottom
+          Position.Y = 648.000000000000000000
+          Size.Width = 240.000000000000000000
+          Size.Height = 320.000000000000000000
+          Size.PlatformDefault = False
+          TabOrder = 2
         end
       end
       object Layout4: TLayout
         Align = Right
-        Position.X = 1197.000000000000000000
+        Position.X = 1198.000000000000000000
         Size.Width = 240.000000000000000000
         Size.Height = 968.000000000000000000
         Size.PlatformDefault = False
@@ -181,12 +200,71 @@ object Form1: TForm1
             902s
             240s
             902s)
-          object TabModel: TTabItem
+          object TabCamera: TTabItem
             CustomIcon = <
               item
               end>
             TextSettings.Trimming = None
             IsSelected = True
+            Size.Width = 61.000000000000000000
+            Size.Height = 26.000000000000000000
+            Size.PlatformDefault = False
+            StyleLookup = ''
+            TabOrder = 0
+            TabStop = False
+            Text = 'Camera'
+            OnClick = TabCameraClick
+            ExplicitSize.cx = 61.000000000000000000
+            ExplicitSize.cy = 26.000000000000000000
+            object CameraRotationLayout: TLayout
+              Align = Top
+              Size.Width = 240.000000000000000000
+              Size.Height = 257.000000000000000000
+              Size.PlatformDefault = False
+              TabOrder = 1
+            end
+            object CameraInclinationLayout: TLayout
+              Align = Top
+              Position.Y = 257.000000000000000000
+              Size.Width = 240.000000000000000000
+              Size.Height = 240.000000000000000000
+              Size.PlatformDefault = False
+              TabOrder = 2
+              TabStop = False
+              object Button1: TButton
+                Position.X = 8.000000000000000000
+                Position.Y = 218.000000000000000000
+                TabOrder = 1
+                Text = 'AutoFit'
+                OnClick = Button1Click
+              end
+            end
+            object StringGrid2: TStringGrid
+              Align = Client
+              CanFocus = True
+              ClipChildren = True
+              Size.Width = 240.000000000000000000
+              Size.Height = 405.000000000000000000
+              Size.PlatformDefault = False
+              TabOrder = 0
+              RowCount = 14
+              Viewport.Width = 236.000000000000000000
+              Viewport.Height = 380.000000000000000000
+              object StringColumn3: TStringColumn
+                Header = 'Property'
+              end
+              object StringColumn4: TStringColumn
+                HorzAlign = Trailing
+                Header = 'Value'
+              end
+            end
+          end
+          object TabModel: TTabItem
+            CustomIcon = <
+              item
+              end>
+            TextSettings.Trimming = None
+            IsSelected = False
             Size.Width = 55.000000000000000000
             Size.Height = 26.000000000000000000
             Size.PlatformDefault = False
@@ -213,65 +291,6 @@ object Form1: TForm1
                 Header = 'Property'
               end
               object StringColumn2: TStringColumn
-                HorzAlign = Trailing
-                Header = 'Value'
-              end
-            end
-            object Button1: TButton
-              Position.X = 8.000000000000000000
-              Position.Y = 408.000000000000000000
-              TabOrder = 1
-              Text = 'AutoFit'
-              OnClick = Button1Click
-            end
-          end
-          object TabCamera: TTabItem
-            CustomIcon = <
-              item
-              end>
-            TextSettings.Trimming = None
-            IsSelected = False
-            Size.Width = 61.000000000000000000
-            Size.Height = 26.000000000000000000
-            Size.PlatformDefault = False
-            StyleLookup = ''
-            TabOrder = 0
-            TabStop = False
-            Text = 'Camera'
-            OnClick = TabCameraClick
-            ExplicitSize.cx = 61.000000000000000000
-            ExplicitSize.cy = 26.000000000000000000
-            object CameraRotationLayout: TLayout
-              Align = Top
-              Size.Width = 240.000000000000000000
-              Size.Height = 257.000000000000000000
-              Size.PlatformDefault = False
-              TabOrder = 1
-            end
-            object CameraInclinationLayout: TLayout
-              Align = Top
-              Position.Y = 257.000000000000000000
-              Size.Width = 240.000000000000000000
-              Size.Height = 240.000000000000000000
-              Size.PlatformDefault = False
-              TabOrder = 2
-              TabStop = False
-            end
-            object StringGrid2: TStringGrid
-              Align = Client
-              CanFocus = True
-              ClipChildren = True
-              Size.Width = 240.000000000000000000
-              Size.Height = 405.000000000000000000
-              Size.PlatformDefault = False
-              TabOrder = 0
-              RowCount = 14
-              Viewport.Width = 236.000000000000000000
-              Viewport.Height = 380.000000000000000000
-              object StringColumn3: TStringColumn
-                Header = 'Property'
-              end
-              object StringColumn4: TStringColumn
                 HorzAlign = Trailing
                 Header = 'Value'
               end
@@ -329,12 +348,181 @@ object Form1: TForm1
       Text = 'Output'
       ExplicitSize.cx = 69.000000000000000000
       ExplicitSize.cy = 26.000000000000000000
+      object Label1: TLabel
+        Align = HorzCenter
+        StyledSettings = [Family, Style, FontColor]
+        Position.X = 196.000000000000000000
+        Size.Width = 1046.000000000000000000
+        Size.Height = 968.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 96.000000000000000000
+        TextSettings.HorzAlign = Center
+        Text = 'To Be Developed'
+        TabOrder = 0
+      end
     end
   end
   object Timer1: TTimer
     Enabled = False
     OnTimer = Timer1Timer
     Left = 456
+    Top = 578
+  end
+  object ImageList1: TImageList
+    Source = <
+      item
+        MultiResBitmap.Height = 32
+        MultiResBitmap.Width = 32
+        MultiResBitmap.TransparentColor = -16777192
+        MultiResBitmap = <
+          item
+            Width = 32
+            Height = 32
+            PNG = {
+              89504E470D0A1A0A0000000D4948445200000020000000200806000000737A7A
+              F4000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+              02D4494441545847ED964BA84D5118C7B73725A1BC5F9167DE914C14A1E432F2
+              2A067742CA48C96B4032326040484806F20EA594481E3110254A1E97019167E6
+              08BFDFD9FB6877CED9C7D9EB9E7B46FEF5EB7EE7BB6B7DDFB7D7FED65A3B6A85
+              3AC26138029D743452263F075F13B4838A6897FCCDAB3DD0179E157E45D158F8
+              041B0ABF1A2093B787AD09DAFA72CB8921F2697FC56641DAFA722BB480BAE97F
+              01A1EA006BE04D82B6BE86683E3C810B302A415BDF026833B9D7BBC33E98A5A3
+              44FAEEC35598A4A35E1A08C7E0158CD451451E6C2BE1351C8501102CDFE97678
+              079BA02BD42AC76E06E76E83A0FE9808BFE120B8F479E51CE71AC35815556D1B
+              5AF523F8094FA1D64E778C639DE35C6304ADC014B8159BD168380B065DA62343
+              F3C084D760820E640C63E556BA80A266C25D30C1641D89C6C1657800B375A454
+              D702949DBE0A8A9D2EDAFA2A5DEF0760486CE69305DC8ECD8AEA062713B483D4
+              9ABBA0337C4ED0CED22118169BE50A29600C5C8417601F88B6C7B1CD5A2AFBA3
+              576C962B6F0173E13A5C824160C389B64D78036CD4B4423FFBCA7A603078F3A5
+              BBBF54CE79091EDF4519A3EA2E701586C7E65F8D0097F90B2C079F623F6C841E
+              E07EF7F2F1EBD80EF7777F505B602F38670518C358C64CCB9C8537D004A73590
+              EFCA2FDEB7B00EA6814B7E0F3E801F9E33C043C9EB7735F87FCF85F7E0FBEE07
+              8E758EFF3386B18C69EC623F9C81262B580877603D18F43B8C07CFF187E0D3ED
+              068FD3D28FD1DED005FC1C3F0173E02338D639CE3586B18C696C7398CB5763EE
+              A8055C26030CD5514116FA0D5CD69EE0717C0ABC252DDED7E1AA3483631C9BD5
+              E0E63097395B1CF4187C973F20EBD6F2A92D742A4C875D89ED327BFC1E079FFA
+              3CB8E4CF21BD526999C35CE63477417DC0A3D4BB3B4B6BC1BDFE2FB945ED8D2C
+              99C35CE6CC252BF66ED80195F6B6BE9DE0591074FDD6223BD86FBE9BB0043C62
+              652958DC15B047DA5C8BC126B4A3457B11E45414FD01FEC89455399BACB50000
+              000049454E44AE426082}
+            FileName = 'C:\git\SpritelyFMX\data\3d-model.png'
+          end>
+        Name = 'Static'
+      end
+      item
+        MultiResBitmap.Height = 32
+        MultiResBitmap.Width = 32
+        MultiResBitmap.TransparentColor = -16777192
+        MultiResBitmap = <
+          item
+            Width = 32
+            Height = 32
+            PNG = {
+              89504E470D0A1A0A0000000D4948445200000020000000200806000000737A7A
+              F4000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+              010F494441545847ED97C90DC2301045C3228A425006578E94C2D2155004200E
+              9C8036E0FF2823BC8D644C2C83C8939E1C666CBC25515C75188CE006DEE12393
+              37B886ECCB838950A31CAEA00747C7E4B8FEF5421A85783737818CB12F0FEDCF
+              B43849C959F17E5316A3D794449B492EEABE8BAF8089B6676DF35DF740CA0076
+              F000E770C0405BC46E81D4A317B88043188BDA8F9A70907A67E73A7645A48D87
+              9A70907ADCBE193C19B1981591BA1E6AC2C1ADC75973F6E68AECA186D5FE27DF
+              0352AFF81614BF096991C7700B8F30F545F4F1003EC5EAA7F853D07D0F9868F7
+              80162729392B5E7C05CC01F04042F8E99C8B6953063FCB795890E5C9ED127AF0
+              B8C441C801258757C8CE8347B37FA4AA9EB40ADD563CCCFA180000000049454E
+              44AE426082}
+            FileName = 'C:\git\SpritelyFMX\data\film.png'
+          end>
+        Name = 'Animated'
+      end
+      item
+        MultiResBitmap.Height = 32
+        MultiResBitmap.Width = 32
+        MultiResBitmap = <
+          item
+            Width = 32
+            Height = 32
+            PNG = {
+              89504E470D0A1A0A0000000D4948445200000020000000200806000000737A7A
+              F4000000017352474200AECE1CE90000000467414D410000B18F0BFC61050000
+              0600494441545847ED966B4C14571480CF9D999D99651758975D540A02220FAB
+              29DA1FA624ADC65234A9D6472C6D6AB0B43E68D5B4B6A68FA4497FF55F6DDAA4
+              3F8CC10735C1C64A9AA64A68D5829154892F6A795441812C0F2B288F6597DD9D
+              65676ECF9D1D406017ECAFA6895F7667EE3DF7DC7B1EF7DCBB0B4FF8AF21C63B
+              22AB8A8BE5D87E89339B07431515154143FC581416168A7EFF1CC193A068178F
+              1F0F18E269447280E46FDD954F282D2244CD0B86884D14B81ED42C0F06C5D28B
+              1507BD865E445615EEB18A42B044D5B46D2A852451A0439AC65D263C2DFFEDC4
+              B16A436D9C490EAC2F29890978D503A340768A00F8990CA5707C4EC8BD03B3A1
+              1AA24960D4FC9029EE182EFBA6211AC7077E45A6D21173ACF0496569A9CF1003
+              67BCA1A0A8C8A278B5EF08903D918C330881E221317E83D19D068E6D8E649C11
+              03668923DC5EC5AB96B1400DF18403A04AFBF15918EE448752FA92D19C066628
+              EAD804E4B58047FDD0E8841DC8DFBA7B21688439F038588DF7342880C568CE08
+              D1C84705453BD3F5367B146CDD811E91AF597B3630CA6F2851AB38E056A34527
+              EE0BAE41FB34E02E0068EB3920FB0CD599D1E8BEF3278F7EAB67805292AB0B67
+              21E81DD13CAAF676C813388B733E43E3BB50BC93B5431EEF59EF282D663A9889
+              D9E1C832FDC51E18C2442D4400A3064F508344A78D7B3E23C1F6F4A2B9DC280A
+              8378CE42682E80EF8C5407B732D3614B49B2735ED49DCD0B4DA37AF605F6A040
+              6E10A0DB583B12015583B756A5C3969559608F9541C5D5AFDCBA0707CF34C148
+              5085BDEB96C0CADC14104D1C0C8F04A1AAAE0D0E9DBF03928067CA58633AA49E
+              3D79F64859FC9C8B27EACBA8ED64FD4751421AE42D72C0FB5B9E857834CE16E4
+              790E16CCB7419C2C4066521C6C7821130494B1315936414E6A02B8DD23D0D039
+              0422CAA742416DC66DFBB4A3E98F11DD01D75FD7BC8B96E55E02CAA5E1F053E8
+              9D895D1CD46FF2B955557A674D36E4A43958E1E80B84C16B2EC10A490E2B5864
+              BC36D83E85C5C09B78B08A1C9CA8EB0459E58615931F4C60C26C533FAE5DAD69
+              6477CDC9A3ED4C7DDCBD73E5657F0217789553C95A8CE415599337F112346AB8
+              708CC4FC7CC438871A58FC664900A70DEF14163A933D825914F419A2993698A9
+              79235B9323642DB381C61BC25AE1A91159FDFAAE0C810BD50C29B0E0837539F0
+              46FEE2B0321A1E18C29F03ECD8E3C357C2A43ECB043A73B1DE05EF955D837992
+              C9A509EA8BD5DF97E9114F256AF5737C281D6F8C24190BA9D935C8AA363C807B
+              5A55DB08BFD436E9ED697D84E2A968E818002B162508A3B8A5C2427D2002511D
+              E029C1704C8280D134A2030FDD6CFBC209730F7B61C8EDD1DB8C497DD4F129A3
+              70B5A5D728407DEFA3DE90511DA0845758CCCCA48845D5DCF1404F2D83170410
+              F03BC6A43E3AD0D23980F3899E1096383C1F51FF4BE8A72012694B97DB07BCCA
+              96EDF959E6CF8B56C082C43830190E98251152931DE074C4E9062DD84F494A80
+              443B260D2DDAAC326CCC4B071B1ED3DF5BFAFA798D3BDCD15C7F4F9F3C85A819
+              E81C0CDC1625536BF6023B58F0FC9B71311D34B0243B19B2D3E6C2F59BED70AE
+              B601E6A1234BB270AB8D3A61BAB25984A50B9D785770ADD5DDEA6D7D2002511D
+              B8FBEB89E11B9EE099B66E4CE7E894FF1F78339EAEB909DB8FD4C3C7A75A60FF
+              97A72018C02C1B35327662DB7B06A16960F4345C3E3651305388EA0023F4D05D
+              FAE3D5AEB686BB7DE315AE8386AC3112888A1778BF079CF6581431E386658183
+              7BBDC35079C575A7ABB2FB70581899A835A0F377AB6F3031A7B5FFA167D3B254
+              BB688B3787E56827232511D62E4F86F52B526173FE7290B10E74FBE8E883FE11
+              38F47393E7AB0B9DC5D0833F183330B303880FE3EFB16776DC6F1B5C33DF6196
+              E6E3F54B049C8601DBE22C9088FB6FC253327642DABA06E05065A3FB8BDAF612
+              B8F4C3695D3803B33AC0F0DD6D68BA6DCFAABB79EB7EAAE2F3A75B441E4F370F
+              321A6699F7E22F60D77D37545F77C1819F1A6B8ED4F7BD0BB527AB8CE9336254
+              CDE331B7A0C8D2AB84D6E43A630A363FE3CC4B9D139BCC96E857FCDD35B7FAEB
+              AA9AFACF814B3C0FBDE523C69459F9570E4C41C2EFD86D14C2AF126E3EE17F05
+              C03F129B35A444468F1B0000000049454E44AE426082}
+            FileName = 'C:\git\SpritelyFMX\data\animation.png'
+          end>
+        Name = 'AnimationPose'
+      end>
+    Destination = <
+      item
+        Layers = <
+          item
+            Name = 'Static'
+            SourceRect.Right = 32.000000000000000000
+            SourceRect.Bottom = 32.000000000000000000
+          end>
+      end
+      item
+        Layers = <
+          item
+            Name = 'Animated'
+            SourceRect.Right = 32.000000000000000000
+            SourceRect.Bottom = 32.000000000000000000
+          end>
+      end
+      item
+        Layers = <
+          item
+            Name = 'AnimationPose'
+            SourceRect.Right = 32.000000000000000000
+            SourceRect.Bottom = 32.000000000000000000
+          end>
+      end>
+    Left = 528
     Top = 578
   end
 end

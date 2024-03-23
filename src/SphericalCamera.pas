@@ -11,7 +11,6 @@ type
   private
     fInclinationTransform: TCastleTransform;
     fCamera: TCastleCamera;
-    FProjectionType: TProjectionType;
     fLookAt: TVector3;
     fPan: TVector2;
     procedure SetProjectionType(const AProjectionType: TProjectionType);
@@ -48,7 +47,6 @@ end;
 
 destructor TSphericalCamera.Destroy;
 begin
-
   inherited;
 end;
 

@@ -1,0 +1,57 @@
+object frmLoadingDialog: TfrmLoadingDialog
+  Left = 0
+  Top = 0
+  BorderIcons = []
+  BorderStyle = None
+  Caption = 'Form3'
+  ClientHeight = 216
+  ClientWidth = 577
+  Position = MainFormCenter
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object FormText: TLabel
+    Align = Client
+    StyledSettings = [Family, FontColor]
+    Margins.Left = 16.000000000000000000
+    Margins.Right = 16.000000000000000000
+    Size.Width = 545.000000000000000000
+    Size.Height = 184.000000000000000000
+    Size.PlatformDefault = False
+    TextSettings.Font.Size = 16.000000000000000000
+    TextSettings.Font.StyleExt = {00070000000000000004000000}
+    TextSettings.HorzAlign = Center
+    TextSettings.Trimming = None
+    Text = 'FormText'
+    TabOrder = 3
+  end
+  object Panel1: TPanel
+    Align = Bottom
+    Position.Y = 184.000000000000000000
+    Size.Width = 577.000000000000000000
+    Size.Height = 32.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    object ProgressBar1: TProgressBar
+      Orientation = Horizontal
+      Position.X = 16.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 457.000000000000000000
+      Size.Height = 20.000000000000000000
+      Size.PlatformDefault = False
+      Value = 50.000000000000000000
+    end
+  end
+  object Memo1: TMemo
+    Touch.InteractiveGestures = [Pan, LongTap, DoubleTap]
+    DataDetectorTypes = []
+    Align = Client
+    Size.Width = 577.000000000000000000
+    Size.Height = 184.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 5
+    Viewport.Width = 573.000000000000000000
+    Viewport.Height = 180.000000000000000000
+  end
+end

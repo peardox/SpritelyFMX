@@ -2,22 +2,13 @@ unit SpritelyTypes;
 
 interface
 uses
-  System.SysUtils, CastleVectors, CastleBoxes, CastleRectangles;
+  System.SysUtils, CastleVectors, CastleBoxes, CastleRectangles,
+  System.Generics.Collections;
 
 type
   TPDXMessageEvent = procedure (Sender: TObject; const Msg: String) of object;
   TPDXRotationEvent = procedure (Sender: TObject; const Rotation: Single) of object;
   TOptionLanguage = ( enUS, ptBR, frFR, itIT, deDE, esES, ruRU, jaJP, koKR, zhCN, zhTW);
-
-  { TModelInfo }
-  TModelInfo = record
-    Name: String;
-    Translation: TVector3;
-    Scale: TVector3;
-    Rotation: TVector4;
-    Size: TVector3;
-    Center: TVector3;
-  end;
 
   { TExtents }
   TExtents = record
@@ -103,6 +94,5 @@ begin
       Result := Result + Pi2;
     end;
 end;
-
 
 end.

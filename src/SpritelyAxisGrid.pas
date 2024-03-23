@@ -18,6 +18,8 @@ type
     constructor Create(AOwner: TComponent); overload; override;
     constructor Create(const AOwner: TComponent; const Color: TCastleColorRGB; const AGridSize: Integer = 1; const AGridStep: Integer = 1; const AGridScale: Single = 1); reintroduce; overload;
     destructor Destroy; override;
+    procedure SetGround(const AValue: Single); overload;
+    procedure SetGround(const AModel: TCastleScene); overload;
   end;
 
   TCameraWidget = class(TCastleScene)
@@ -36,6 +38,8 @@ type
 
 implementation
 
+uses Math;
+
 constructor TAxisGrid.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -44,6 +48,22 @@ end;
 destructor TAxisGrid.Destroy;
 begin
   inherited;
+end;
+
+procedure TAxisGrid.SetGround(const AModel: TCastleScene);
+begin
+  if assigned(AModel) and not(AModel.RootNode = nil) then
+    begin
+    if not AModel.BoundingBox.IsEmptyOrZero then
+      begin
+        Translation := Vector3(0, Min(AModel.BoundingBox.Data[0].Y, AModel.BoundingBox.Data[1].Y), 0);
+      end;
+    end;
+end;
+
+procedure TAxisGrid.SetGround(const AValue: Single);
+begin
+  Translation := Vector3(0, AValue, 0);
 end;
 
 constructor TAxisGrid.Create(const AOwner: TComponent; const Color: TCastleColorRGB; const AGridSize: Integer = 1; const AGridStep: Integer = 1; const AGridScale: Single = 1);

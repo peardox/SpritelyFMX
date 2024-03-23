@@ -12,34 +12,17 @@ uses System.SysUtils, System.Types, System.UITypes, System.Classes, System.Gener
 
 type
   TModelPack = class;
+  TModelInfo = class;
 
-  TGimbal = class(TComponent)
-  private
-//    fOffsetScale: TVector3;
-//    fOffsetTranslation: TVector3;
-    fOffsetRotation: TVector4;
-    fScale: Single;
-    fTranslation: TVector3;
-    fRotation: TVector4;
-    procedure SetScale(const AValue: Single);
-    procedure SetTranslation(const AValue: TVector3);
-    procedure SetRotation(const AValue: TVector4);
-  public
-    constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-    procedure Apply;
-    property Scale: Single read fScale write SetScale;
-    property Translation: TVector3 read fTranslation write SetTranslation;
-    property Rotation: TVector4 read fRotation write SetRotation;
-  end;
-
+  { CastleModel }
   TCastleModel = class(TCastleScene)
   private
     fChildOf: TModelPack;
     fScale: Single;
-    fGimbal: TGimbal;
+    fInstanceCount: Integer;
     fAlign: TModelAlign;
     fDebugBox: TDebugTransformHexahedron;
+    fInfo: TModelInfo;
     function GetHasDebugBox: Boolean;
   public
     Frame: Integer;
@@ -48,18 +31,48 @@ type
     function GetNormalScale: Single;
     property NormalScale: Single read GetNormalScale write fScale;
     function Normalize: Boolean;
+    function CreateInfo: TModelInfo;
     procedure SelectModel;
+    procedure UpdateModel(const AModel: TCastleModel);
     procedure DeSelectModel;
     procedure AddDebugBox;
     procedure ShowDebugBox(const AValue: Boolean);
     procedure SetDebugBoxColour(const AValue: TCastleColor);
-    function GetInfo: TModelInfo;
     function AlignTo(const OtherModel: TCastleModel; const Align: TModelAlign; const Pad: TVector3): TVector3;
-    procedure LoadModel(filename: String);
-    property Gimbal: TGimbal read fGimbal write fGimbal;
+    procedure LoadModel(filename: String; const DoNormalize: Boolean = True);
     property Align: TModelAlign read fAlign write fAlign;
     property DebugBox: TDebugTransformHexahedron read fDebugBox write fDebugBox;
     property HasDebugBox: Boolean read GetHasDebugBox;
+    property InstanceCount: Integer read fInstanceCount write fInstanceCount;
+    property ModelInfo: TModelInfo read fInfo write fInfo;
+  end;
+
+  { TModelInfo }
+  TModelInfo = class
+  private
+    fIsValid: Boolean;
+    fModel: TCastleModel;
+    fName: String;
+    fTranslation: TVector3;
+    fScale: TVector3;
+    fRotation: TVector4;
+    fSize: TVector3;
+    fCenter: TVector3;
+    fAnimationCount: Integer;
+    fAnimations: TList<String>;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    property IsValid: Boolean read fIsValid write fIsValid;
+    property Model: TCastleModel read fModel write fModel;
+    property Name: String read fName write fName;
+    property Translation: TVector3 read fTranslation write fTranslation;
+    property Scale: TVector3 read fScale write fScale;
+    property Rotation: TVector4 read fRotation write fRotation;
+    property Size: TVector3 read fSize write fSize;
+    property Center: TVector3 read fCenter write fCenter;
+    property AnimationCount: Integer read fAnimationCount write fAnimationCount;
+    property Animations: TList<String> read fAnimations write fAnimations;
   end;
 
   TPDXModelEvent = procedure (Sender: TObject; const AModel: TCastleModel) of object;
@@ -89,6 +102,7 @@ uses
   Math,
   CastleApp,
   CastleLog,
+  System.IOUtils,
   CastleUriUtils;
 
 function ModelAlign(const AlignX: TModelXAlign = modelXDefined; AlignY: TModelYAlign = modelYDefined; AlignZ: TModelZAlign = modelZDefined): TModelAlign;
@@ -148,7 +162,6 @@ begin
     end
   else
     begin
-//      WriteLnLog('Self Model = ' + Url);
       newSize := Vector3(BoundingBox.Size.X / 2,
                      BoundingBox.Size.Y / 2,
                      BoundingBox.Size.Z / 2);
@@ -173,7 +186,6 @@ begin
         end
       else
         begin
-//          WriteLnLog('Other Model = ' + otherModel.Url);
           otherSize := Vector3(OtherModel.BoundingBox.Size.X / 2,
                          OtherModel.BoundingBox.Size.Y / 2,
                          OtherModel.BoundingBox.Size.Z / 2);
@@ -183,9 +195,6 @@ begin
           otherLoc := OtherModel.Translation;
         end;
     end;
-
-//  WriteLnLog('Other : Center = ' + otherCenter.ToString + ', Size = ' + otherSize.ToString + ', Loc = ' + otherLoc.ToString);
-//  WriteLnLog('Self  : Center = ' + newCenter.ToString + ', Size = ' + newSize.ToString);
 
   Result := otherCenter +
             Vector3(otherSize.X,
@@ -298,8 +307,8 @@ begin
   fAlign.X := modelXCenter;
   fAlign.Y := modelYCenter;
   fAlign.Z := modelZCenter;
+  fInstanceCount := 0;
 //  Normalize;
-  fGimbal := TGimbal.Create(Self);
   fDebugBox := Nil;
 end;
 
@@ -319,26 +328,44 @@ end;
 
 destructor TCastleModel.Destroy;
 begin
-  fGimbal.Free;
   inherited;
 end;
 
-function TCastleModel.GetInfo: TModelInfo;
+function TCastleModel.CreateInfo: TModelInfo;
+var
+  I: Integer;
+  Res: TModelInfo;
 begin
-  Result.Name := Self.Url;
-  Result.Translation := Self.Translation;
-  Result.Scale := Self.Scale;
-  Result.Rotation := Self.Rotation;
+  Res := TModelInfo.Create;
+  Res.IsValid := True;
+  Res.Model := Self;
+  Res.Name := TPath.GetFileName(Self.Url);
+  Res.Translation := Self.Translation;
+  Res.Scale := Self.Scale;
+  Res.Rotation := Self.Rotation;
+  Res.AnimationCount := Self.AnimationsList.Count;
+  if Res.AnimationCount > 0 then
+    begin
+      Res.Animations := TList<String>.Create;
+      for I := 0 to Res.AnimationCount - 1 do
+        begin
+          Res.Animations.Add(AnimationsList[I]);
+        end;
+    end;
+
   if Self.LocalBoundingBox.IsEmptyOrZero then
     begin
-      Result.Size := Vector3(0,0,0);
-      Result.Center := Vector3(0,0,0);
+      Res.Size := Vector3(0,0,0);
+      Res.Center := Vector3(0,0,0);
     end
   else
     begin
-      Result.Size := Self.BoundingBox.Size;
-      Result.Center := Self.BoundingBox.Center;
+      Res.Size := Self.BoundingBox.Size;
+      Res.Center := Self.BoundingBox.Center;
     end;
+
+  ModelInfo := Res;
+  Result := Res;
 end;
 
 function TCastleModel.GetNormalScale: Single;
@@ -367,14 +394,15 @@ begin
    Result := OwningCastleApp.Stage.fScale;
 end;
 
-procedure TCastleModel.LoadModel(filename: String);
+procedure TCastleModel.LoadModel(filename: String; const DoNormalize: Boolean = True);
 begin
   try
     if UriFileExists(filename) then
       begin
         Load(filename);
         fChildOf := Nil;
-        Normalize;
+        if DoNormalize then
+          Normalize;
       end;
   except
     on E : Exception do
@@ -484,6 +512,16 @@ begin
     end;
 end;
 
+procedure TCastleModel.UpdateModel(const AModel: TCastleModel);
+begin
+  fChildOf := AModel.fChildOf;
+  fScale := Amodel.fScale;
+//  Inc(AModel.InstanceCount);
+  fAlign :=  Amodel.fAlign;
+//  fDebugBox: TDebugTransformHexahedron;
+  fInfo := Amodel.fInfo;
+end;
+
 function TCastleModel.GetHasDebugBox: Boolean;
 begin
   Result := False;
@@ -550,62 +588,24 @@ begin
     fDebugColor := AValue;
 end;
 
-{ TGimbal }
+{ TModelInfo }
 
-procedure TGimbal.Apply;
+constructor TModelInfo.Create;
 begin
-  if Owner is TCastleModel then
-    begin
-      TCastleModel(Owner).Rotation := fOffsetRotation + fRotation;
-//      TCastleModel(Owner).Scale := fOffsetScale * fScale;
-//      TCastleModel(Owner).Translation := fOffsetTranslation + fTranslation;
-    end
-  else
-    Raise Exception.Create('Attempted to set Gimbal Rotation when owner is not TCastleModel');
+  fAnimations := Nil;
 end;
 
-constructor TGimbal.Create(AOwner: TComponent);
+destructor TModelInfo.Destroy;
 begin
+  if fModel is TCastleModel then
+    begin
+      if Assigned(fModel) then
+        FreeAndNil(fModel);
+    end;
+
+  if Assigned(fAnimations) then
+    FreeAndNil(fAnimations);
   inherited;
-  fScale := 1.0;
-end;
-
-destructor TGimbal.Destroy;
-begin
-  inherited;
-end;
-
-procedure TGimbal.SetRotation(const AValue: TVector4);
-begin
-  if Owner is TCastleModel then
-    begin
-      fRotation := AValue;
-      TCastleModel(Owner).Rotation := fOffsetRotation + fRotation;
-    end
-  else
-    Raise Exception.Create('Attempted to set Gimbal Rotation when owner is not TCastleModel');
-end;
-
-procedure TGimbal.SetScale(const AValue: Single);
-begin
-  if Owner is TCastleModel then
-    begin
-      fScale := AValue;
-//      TCastleModel(Owner).Scale := fOffsetScale * fScale;
-    end
-  else
-    Raise Exception.Create('Attempted to set Gimbal Scale when owner is not TCastleModel');
-end;
-
-procedure TGimbal.SetTranslation(const AValue: TVector3);
-begin
-  if Owner is TCastleModel then
-    begin
-      fTranslation := AValue;
- //     TCastleModel(Owner).Translation := fOffsetTranslation + fTranslation;
-    end
-  else
-    Raise Exception.Create('Attempted to set Gimbal Translation when owner is not TCastleModel');
 end;
 
 end.

@@ -1,27 +1,34 @@
 unit SpritelyCheckTextures;
 
+// {$define logit}
 interface
 
-uses System.Generics.Collections{, FMX.Types};
-
+uses System.Generics.Collections, SpritelyTypes, CastleModel;
 
 type
-  TFileDirectory = class {(TFMXObject)}
+  TFileDirectory = class
   private
     fParentDir: String;
     fSubDir: String;
     fFileName: String;
+    fGroupID: Integer;
+    fModelInfo: TModelInfo;
   public
-    constructor Create(const AParentDir: String; ASubDir: String; AFileName: String);
+    constructor Create(const AParentDir: String; ASubDir: String; AFileName: String; AGroupID: Integer);
+    destructor Destroy; override;
     function GetFullFileName: String;
     property ParentDir: String read fParentDir write fParentDir;
     property SubDir: String read fSubDir write fSubDir;
     property FileName: String read fFileName write fFileName;
+    property GroupID: Integer read fGroupID write fGroupID;
+    property ModelInfo: TModelInfo read fModelInfo write fModelInfo;
   end;
+  TFileDirectoryList = TObjectList<TFileDirectory>;
 
 procedure CheckGLTFTextures(const ADir: String);
 function ScanGLTFModels(const ADir: String): TObjectList<TFileDirectory>;
 function ScanOBJModels(const ADir: String): TObjectList<TFileDirectory>;
+procedure SaveModelList(const AFilename: String; const AList: TFileDirectoryList);
 
 implementation
 
@@ -31,6 +38,7 @@ uses System.SysUtils,
   CastleLog,
   System.JSON,
   JSON.Types,
+  JSON.Serializers,
   System.IOUtils;
 
 procedure ScanFile(const ADir: String; const AFile: String);
@@ -78,7 +86,7 @@ begin
   }
 end;
 
-procedure ScanModels(const ADir: String; const ASubDir: String; const AFileExt: TArray<String>; var AList: TObjectList<TFileDirectory>);
+procedure ScanModels(const ADir: String; const ASubDir: String; const AFileExt: TArray<String>; var AList: TObjectList<TFileDirectory>; var GroupID: Integer);
 var
   sr: TSearchRec;
   FileAttrs: Integer;
@@ -86,12 +94,15 @@ var
   ASrch: String;
   I: Integer;
   DirItem: TFileDirectory;
+  first: Boolean;
 begin
   {$IF DEFINED(MSWINDOWS)}
   AFileSpec := '*.*';
   {$ELSE}
   AFileSpec := '*';
   {$ENDIF}
+  First := True;
+
   FileAttrs := faAnyFile or faDirectory;
   if ASubDir = String.Empty then
     ASrch := ADir + TPath.DirectorySeparatorChar + AFileSpec
@@ -106,12 +117,23 @@ begin
           begin
             for I := Low(AFileExt) to High(AFileExt) do
               begin
-                if TPath.GetExtension(sr.Name) = AFileExt[I] then
+                if CompareText(TPath.GetExtension(sr.Name), AFileExt[I]) = 0 then
                   begin
+                    if First then
+                      begin
+                        First := False;
+                        Inc(GroupID);
+                        {$ifdef logit}
+                        WriteLnLog('');
+                        {$endif}
+                      end;
                     if ASubDir = String.Empty then
-                      DirItem := TFileDirectory.Create(ADir, '', sr.Name)
+                      DirItem := TFileDirectory.Create(ADir, '', sr.Name, GroupID)
                     else
-                      DirItem := TFileDirectory.Create(ADir, ASubDir, sr.Name);
+                      DirItem := TFileDirectory.Create(ADir, ASubDir, sr.Name, GroupID);
+                    {$ifdef logit}
+                    WriteLnLog(Format('%02d - %s - %s', [DirItem.GroupID, DirItem.SubDir, DirItem.FileName]));
+                    {$endif}
                     AList.Add(DirItem);
                     break;
                   end;
@@ -122,9 +144,9 @@ begin
             if (sr.Name <> '.') and (sr.Name <> '..')  then
               begin
                 if ASubDir = String.Empty then
-                  ScanModels(ADir, sr.Name, AFileExt, AList)
+                  ScanModels(ADir, sr.Name, AFileExt, AList, GroupID)
                 else
-                  ScanModels(ADir, ASubDir + TPath.DirectorySeparatorChar + sr.Name, AFileExt, AList);
+                  ScanModels(ADir, ASubDir + TPath.DirectorySeparatorChar + sr.Name, AFileExt, AList, GroupID);
               end;
           end
       end;
@@ -136,18 +158,50 @@ end;
 function ScanGLTFModels(const ADir: String): TObjectList<TFileDirectory>;
 var
   TheList: TObjectList<TFileDirectory>;
+  Group: Integer;
 begin
-  TheList := TObjectList<TFileDirectory>.Create;
-  ScanModels(ADir, '', ['.gltf', '.glb'], TheList);
+  Group := 0;
+  TheList := TObjectList<TFileDirectory>.Create(False);
+  ScanModels(ADir, '', ['.gltf', '.glb'], TheList, Group);
   Result := TheList;
+end;
+
+procedure SaveModelList(const AFilename: String; const AList: TFileDirectoryList);
+var
+  lSerializer: TJsonSerializer;
+  JsonText: String;
+begin
+  lSerializer := TJsonSerializer.Create;
+  try
+    try
+      JsonText := lSerializer.Serialize<TFileDirectoryList>(AList);
+      try
+        TFile.WriteAllText(AFilename, JsonText);
+      except
+         on E : Exception do
+           Raise Exception.Create('Save Model List - Exception : Class = ' +
+            E.ClassName + ', Message = ' + E.Message);
+      end;
+    except
+     on E : Exception do
+     begin
+       Raise Exception.Create('Save Model List - Exception : Class = ' +
+        E.ClassName + ', Message = ' + E.Message);
+     end;
+    end;
+  finally
+    FreeAndNil(lSerializer);
+  end;
 end;
 
 function ScanOBJModels(const ADir: String): TObjectList<TFileDirectory>;
 var
   TheList: TObjectList<TFileDirectory>;
+  Group: Integer;
 begin
+  Group := 0;
   TheList := TObjectList<TFileDirectory>.Create;
-  ScanModels(ADir, '', ['.obj'], TheList);
+  ScanModels(ADir, '', ['.obj'], TheList, Group);
   Result := TheList;
 end;
 
@@ -173,7 +227,7 @@ begin
       begin
         if ((sr.Attr and faDirectory) <> faDirectory) then // Not a Directory
           begin
-            if TPath.GetExtension(sr.Name) = GLTF then
+            if CompareText(TPath.GetExtension(sr.Name), GLTF) = 0 then
               ScanFile(ADir, sr.Name);
           end
         else
@@ -190,12 +244,21 @@ end;
 { TFileDirectory }
 
 constructor TFileDirectory.Create(const AParentDir: String; ASubDir,
-  AFileName: String);
+  AFileName: String; AGroupID: Integer);
 begin
   inherited Create;
   fParentDir := AParentDir;
   fSubDir := ASubDir;
   fFileName := AFileName;
+  fGroupID := AGroupID;
+  fModelInfo := Nil;
+end;
+
+destructor TFileDirectory.Destroy;
+begin
+  if Assigned(fModelInfo) then
+    FreeAndNil(fModelInfo);
+  inherited;
 end;
 
 function TFileDirectory.GetFullFileName: String;

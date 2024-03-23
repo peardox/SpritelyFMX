@@ -4,7 +4,7 @@
         <ProjectVersion>20.1</ProjectVersion>
         <FrameworkType>FMX</FrameworkType>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Release</Config>
+        <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Win64</Platform>
         <TargetedPlatforms>131</TargetedPlatforms>
         <AppType>Application</AppType>
@@ -285,6 +285,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="FastMM4.pas"/>
         <DCCReference Include="src\MainGui.pas">
             <Form>Form1</Form>
             <FormType>fmx</FormType>
@@ -299,6 +300,10 @@
         <DCCReference Include="src\SphericalCamera.pas"/>
         <DCCReference Include="src\SpritelyCheckTextures.pas"/>
         <DCCReference Include="src\SpritelyAxisGrid.pas"/>
+        <DCCReference Include="src\FrameToImage.pas"/>
+        <DCCReference Include="src\LoadingForm.pas">
+            <Form>frmLoadingDialog</Form>
+        </DCCReference>
         <None Include="Styles\MaterialOxfordBlue_Linux.style"/>
         <None Include="Styles\MaterialOxfordBlue_Win.style"/>
         <None Include="Styles\Win10Modern.Style"/>
@@ -307,6 +312,7 @@
         <None Include="Styles\Win10ModernGreen.style"/>
         <None Include="Styles\Win10ModernPurple.style"/>
         <None Include="Styles\Win10ModernSlateGray.style"/>
+        <None Include="README.md"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -361,6 +367,12 @@
                 <DeployFile LocalName="Linux64\Release\Spritely" Configuration="Release" Class="ProjectOutput">
                     <Platform Name="Linux64">
                         <RemoteName>Spritely</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="README.md" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win64">
+                        <RemoteDir>.\</RemoteDir>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

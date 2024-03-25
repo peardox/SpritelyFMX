@@ -547,7 +547,7 @@ end;
 
 procedure TForm1.LogTicker(Sender: TObject; const Msg: String);
 begin
-//  Memo1.Lines.Clear;
+  Memo1.Lines.Clear;
   Memo1.Lines.Add(Msg);
 end;
 
@@ -651,9 +651,6 @@ var
 begin
   if Assigned(CastleApp) then
     begin
-//      CastleApp.CreateSpriteImage(CastleApp.Stage, 512, 512, False);
-//      CastleApp.SaveBuffer('../../testcs01.png');
-
       frame := TFrameExport.Create(Self, 1280,1280);
       frame.GrabFromCastleApp(CastleApp);
       frame.Save('../../test.png');
@@ -748,6 +745,8 @@ begin
   if Assigned(CastleApp) and Assigned(CastleApp.Camera) then
   begin
     CastleApp.Camera.Pan := CastleApp.Camera.Pan + Vector2(OX,OY);
+    Caption := Format('%12.4f %12.4f',[CastleApp.Camera.Pan.X, CastleApp.Camera.Pan.Y]);
+
     UpdateCamInfo(Self);
   end;
 end;

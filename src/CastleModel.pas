@@ -1,6 +1,6 @@
 unit CastleModel;
 
-{$define poly}
+ {$define normal}
 
 interface
 
@@ -23,6 +23,7 @@ type
     fAlign: TModelAlign;
     fDebugBox: TDebugTransformHexahedron;
     fInfo: TModelInfo;
+    fOffset: TVector3;
     function GetHasDebugBox: Boolean;
   public
     Frame: Integer;
@@ -32,6 +33,7 @@ type
     property NormalScale: Single read GetNormalScale write fScale;
     function Normalize: Boolean;
     function CreateInfo: TModelInfo;
+    function GetOriginOffset: TVector3;
     procedure SelectModel;
     procedure UpdateModel(const AModel: TCastleModel);
     procedure DeSelectModel;
@@ -45,6 +47,7 @@ type
     property HasDebugBox: Boolean read GetHasDebugBox;
     property InstanceCount: Integer read fInstanceCount write fInstanceCount;
     property ModelInfo: TModelInfo read fInfo write fInfo;
+    property Offset: TVector3 read fOffset write fOffset;
   end;
 
 
@@ -124,6 +127,7 @@ uses
   Math,
   CastleApp,
   CastleLog,
+  CastleBoxes,
   System.IOUtils,
   CastleUriUtils;
 
@@ -330,7 +334,9 @@ begin
   fAlign.Y := modelYCenter;
   fAlign.Z := modelZCenter;
   fInstanceCount := 0;
-//  Normalize;
+{$ifdef normal}
+  Normalize;
+{$endif}
   fDebugBox := Nil;
 end;
 
@@ -392,8 +398,10 @@ begin
       begin
         Load(filename);
         fChildOf := Nil;
+{$ifdef normal}
         if DoNormalize then
           Normalize;
+{$endif}
       end;
   except
     on E : Exception do
@@ -416,6 +424,8 @@ begin
       begin
         if LocalBoundingBox.MaxSize > 0 then
           begin
+
+    fAlign := ModelAlignCenter; // sbdbg
 
             CX := 1;
             CY := 1;
@@ -461,12 +471,36 @@ begin
 
               AScale :=  NormalScale;
               Scale := Vector3(AScale, AScale, AScale);
-              Center := Vector3(CX, CY, CZ);
+//              Center := Vector3(CX, CY, CZ); // sbdbg
+              fOffset := Vector3(CX, CY, CZ); // sbdbg
+
               WriteLnLog('Set Center to ' + Center.ToString);
-              Translation := -BoundingBox.Center;
+//              Translation := -BoundingBox.Center;
               Result := True;
         end;
       end;
+    end;
+end;
+
+function TCastleModel.GetOriginOffset: TVector3;
+var
+  CX, CY, CZ: Single;
+  bb: TBox3D;
+begin
+  Result := Vector3(0,0,0);
+  if not(RootNode = nil) then
+    begin
+      bb := BoundingBox;
+      if not bb.IsEmptyOrZero then
+        begin
+          if bb.MaxSize > 0 then
+            begin
+              CX := Min(bb.Data[0].X, bb.Data[1].X) + (bb.SizeX / 2){ - bb.Center.X};
+              CY := Min(bb.Data[0].Y, bb.Data[1].Y) + (bb.SizeY / 2){ - bb.Center.Y};
+              CZ := Min(bb.Data[0].Z, bb.Data[1].Z) + (bb.SizeZ / 2){ - bb.Center.Z};
+              Result := Vector3(CX, CY, CZ);
+            end;
+        end;
     end;
 end;
 
@@ -528,6 +562,7 @@ end;
 function TModelPack.AddModel(const AFileName: String): TCastleModel;
 begin
   Result := AddModel(AFileName, ModelAlignYBottom);
+//  Result := AddModel(AFileName, ModelAlignYBottom);
 end;
 
 function TModelPack.AddModel(const AFileName: String; const AlignValue: TModelAlign): TCastleModel;
@@ -544,7 +579,9 @@ begin
         if Assigned(model) then
           begin
             fChildren.Add(model);
+{$ifdef normal}
             model.Normalize;
+{$endif}
             model.fChildOf := Self;
             model.AddDebugBox;
             model.SetDebugBoxColour(fDebugColor);

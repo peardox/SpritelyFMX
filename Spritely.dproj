@@ -285,10 +285,8 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="FastMM4.pas"/>
         <DCCReference Include="src\MainGui.pas">
             <Form>Form1</Form>
-            <FormType>fmx</FormType>
         </DCCReference>
         <DCCReference Include="src\CastleApp.pas"/>
         <DCCReference Include="src\SpritelySettings.pas"/>

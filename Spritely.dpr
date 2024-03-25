@@ -3,7 +3,7 @@ program Spritely;
 
 
 uses
-  FastMM4 in 'FastMM4.pas',
+  FastMM4,
   System.StartUpCopy,
   FMX.Forms,
   MainGui in 'src\MainGui.pas' {Form1},

@@ -1,6 +1,7 @@
 unit CastleApp;
 
-{$define AppGrab}
+{$define normal}
+// {$define AppGrab}
 interface
 
 uses
@@ -52,6 +53,7 @@ type
     fCamHeight: Single;
     fAxis: TAxisGrid;
     fDyDx: Single;
+    fFrame: Integer;
     fIsReady: Boolean;
     fWaitingToFit: Boolean;
 {$ifdef AppGrab}
@@ -153,6 +155,7 @@ var
 begin
   inherited;
   LoadViewport;
+  fFrame := 0;
   if(SystemSettings.LastModel <> EmptyStr) and (FileExists(SystemSettings.LastModel)) then
     begin
       model := fModels.AddModel(SystemSettings.LastModel);
@@ -375,7 +378,9 @@ begin
 
       model := AModel.Clone(Self) as TCastleModel;
       model.UpdateModel(AModel);
+{$ifdef normal}
       model.Normalize;
+{$endif}
       Result := model;
       if fStageMultipleModels and not model.BoundingBox.IsEmptyOrZero then
         begin
@@ -537,6 +542,7 @@ begin
       vertScale := V.Box.View2D.Height / fViewport.Height;
       horizScale := V.Box.View2D.Width / fViewport.Width;
       Scale := Max(horizScale, vertScale);
+      Model.Translation := -Model.GetOriginOffset;
 
       SetZoom(Scale * Zoom);
       fWaitingToFit := False;
@@ -552,7 +558,7 @@ end;
 procedure TCastleApp.Render;
 begin
   inherited;
-
+  fFrame := fFrame + 1;
   if Assigned(fStage) then
     begin
       DrawAxis(GetAxis(fStage));
@@ -766,7 +772,9 @@ begin
           SourceViewport.Height := TextureHeight;
 
           CloneScene := SourceScene.Clone(nil) as TCastleModel;
+{$ifdef normal}
           CloneScene.Normalize;
+{$endif}
 
           SourceViewport.Camera.Orthographic.Scale := fZoomFactor2D;
 

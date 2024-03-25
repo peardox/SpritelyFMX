@@ -47,6 +47,25 @@ type
     property ModelInfo: TModelInfo read fInfo write fInfo;
   end;
 
+
+  { TAnimationInfo }
+  TAnimationInfo = class
+  private
+    fName: String;
+    fDuration: Single;
+    fStep: Integer;
+    fPosition: TList<Integer>;
+    function GetStepCount: Integer;
+  public
+    constructor Create(const AName: String; const ADuration: Single);
+    destructor Destroy; override;
+    property Name: String read fName write fName;
+    property Duration: Single read fDuration;
+    property Step: Integer read fStep write fStep;
+    property Count: Integer read GetStepCount;
+    property Position: TList<Integer> read fPosition write fPosition;
+  end;
+
   { TModelInfo }
   TModelInfo = class
   private
@@ -60,8 +79,10 @@ type
     fCenter: TVector3;
     fAnimationCount: Integer;
     fAnimations: TList<String>;
+    fAnimation: TAnimationInfo;
   public
-    constructor Create;
+    constructor Create; overload;
+    constructor Create(const AModel: TCastleModel); overload;
     destructor Destroy; override;
     property IsValid: Boolean read fIsValid write fIsValid;
     property Model: TCastleModel read fModel write fModel;
@@ -73,6 +94,7 @@ type
     property Center: TVector3 read fCenter write fCenter;
     property AnimationCount: Integer read fAnimationCount write fAnimationCount;
     property Animations: TList<String> read fAnimations write fAnimations;
+    property Animation: TAnimationInfo read fAnimation write fAnimation;
   end;
 
   TPDXModelEvent = procedure (Sender: TObject; const AModel: TCastleModel) of object;
@@ -332,40 +354,9 @@ begin
 end;
 
 function TCastleModel.CreateInfo: TModelInfo;
-var
-  I: Integer;
-  Res: TModelInfo;
 begin
-  Res := TModelInfo.Create;
-  Res.IsValid := True;
-  Res.Model := Self;
-  Res.Name := TPath.GetFileName(Self.Url);
-  Res.Translation := Self.Translation;
-  Res.Scale := Self.Scale;
-  Res.Rotation := Self.Rotation;
-  Res.AnimationCount := Self.AnimationsList.Count;
-  if Res.AnimationCount > 0 then
-    begin
-      Res.Animations := TList<String>.Create;
-      for I := 0 to Res.AnimationCount - 1 do
-        begin
-          Res.Animations.Add(AnimationsList[I]);
-        end;
-    end;
-
-  if Self.LocalBoundingBox.IsEmptyOrZero then
-    begin
-      Res.Size := Vector3(0,0,0);
-      Res.Center := Vector3(0,0,0);
-    end
-  else
-    begin
-      Res.Size := Self.BoundingBox.Size;
-      Res.Center := Self.BoundingBox.Center;
-    end;
-
-  ModelInfo := Res;
-  Result := Res;
+  fInfo := TModelInfo.Create(Self);
+  Result := fInfo;
 end;
 
 function TCastleModel.GetNormalScale: Single;
@@ -592,7 +583,42 @@ end;
 
 constructor TModelInfo.Create;
 begin
+  fAnimation := Nil;
   fAnimations := Nil;
+end;
+
+constructor TModelInfo.Create(const AModel: TCastleModel);
+var
+  I: Integer;
+begin
+  Create;
+  IsValid := True;
+  Model := AModel;
+  Name := TPath.GetFileName(AModel.Url);
+  Translation := AModel.Translation;
+  Scale := AModel.Scale;
+  Rotation := AModel.Rotation;
+  AnimationCount := AModel.AnimationsList.Count;
+  Animation := Nil;
+  if AnimationCount > 0 then
+    begin
+      Animations := TList<String>.Create;
+      for I := 0 to AnimationCount - 1 do
+        begin
+          Animations.Add(AModel.AnimationsList[I]);
+        end;
+    end;
+
+  if AModel.LocalBoundingBox.IsEmptyOrZero then
+    begin
+      Size := Vector3(0,0,0);
+      Center := Vector3(0,0,0);
+    end
+  else
+    begin
+      Size := AModel.BoundingBox.Size;
+      Center := AModel.BoundingBox.Center;
+    end;
 end;
 
 destructor TModelInfo.Destroy;
@@ -606,6 +632,27 @@ begin
   if Assigned(fAnimations) then
     FreeAndNil(fAnimations);
   inherited;
+end;
+
+{ TAnimationInfo }
+
+constructor TAnimationInfo.Create(const AName: String; const ADuration: Single);
+begin
+  fName := AName;
+  fDuration := ADuration;
+  fStep := 0;
+  fPosition := TList<Integer>.Create;
+end;
+
+destructor TAnimationInfo.Destroy;
+begin
+  fPosition.Free;
+  inherited;
+end;
+
+function TAnimationInfo.GetStepCount: Integer;
+begin
+  Result := fPosition.Count;
 end;
 
 end.

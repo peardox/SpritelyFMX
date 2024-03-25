@@ -37,7 +37,7 @@ type
     LayoutView: TLayout;
     LayoutLeft: TLayout;
     Memo1: TMemo;
-    Layout4: TLayout;
+    LayoutRight: TLayout;
     View3D: TLayout;
     StringGrid1: TStringGrid;
     StringColumn1: TStringColumn;
@@ -72,7 +72,7 @@ type
     procedure LayoutLeftResize(Sender: TObject);
     procedure Switch3DClick(Sender: TObject);
     procedure SwitchView;
-    procedure Layout4Resize(Sender: TObject);
+    procedure LayoutRightResize(Sender: TObject);
     procedure mnuLoadClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure LayoutViewMouseWheel(Sender: TObject; Shift: TShiftState;
@@ -107,7 +107,7 @@ type
     procedure RotateCamera(Sender: TObject; const ARotation: Single);
     procedure InclineCamera(Sender: TObject; const ARotation: Single);
     procedure UpdateModelInfo;
-    procedure UpdateCamInfo;
+    procedure UpdateCamInfo(Sender: TObject);
     procedure CastleClick(Sender: TObject);
     procedure CameraMove(const OX, OY: Single);
     procedure LoadStyle(const AStyle: String = '');
@@ -193,6 +193,11 @@ begin
         begin
           cameraInclination.Angle := SystemSettings.Projections[cbxProjections.ItemIndex].Inclination;
           cameraAngle.Angle := SystemSettings.Projections[cbxProjections.ItemIndex].Azimuth;
+          {
+          CastleApp.Inclination := cameraInclination.Angle;
+          CastleApp.Azimuth := cameraAngle.Angle;
+          }
+//          UpdateCamInfo(Self);
         end;
     end;
 end;
@@ -264,6 +269,8 @@ begin
   CastleApp := TCastleApp.Create(CastleControl);
   CastleApp.OnExtMessage := LogTicker;
   CastleApp.OnModel := NewModel;
+  CastleApp.OnCameraChange := UpdateCamInfo;
+
   CastleControl.Container.View := CastleApp;
 
   LoadStyle;
@@ -306,7 +313,7 @@ begin
   StringGrid1.Cells[0,12] := 'Zoom';
   StringGrid1.Cells[0,13] := 'FOV';
 
-  StringGrid2.RowCount := 14;
+  StringGrid2.RowCount := 15;
   StringGrid2.Cells[0,0] := 'Stage X';
   StringGrid2.Cells[0,1] := 'Stage Y';
   StringGrid2.Cells[0,2] := 'Stage Z';
@@ -321,10 +328,11 @@ begin
   StringGrid2.Cells[0,11] := 'Translation Z';
   StringGrid2.Cells[0,12] := 'Azimuth';
   StringGrid2.Cells[0,13] := 'Inclination';
+  StringGrid2.Cells[0,14] := 'Tile Angle';
 
 
   UpdateModelInfo;
-  UpdateCamInfo;
+  UpdateCamInfo(Self);
 
   PopulateProjections;
 
@@ -390,7 +398,7 @@ if TabControl2.ActiveTab = TabModel then
   end;
 
   UpdateModelInfo;
-  UpdateCamInfo;
+  UpdateCamInfo(Self);
 
 end;
 
@@ -403,6 +411,7 @@ begin
   model := CastleApp.SelectedModel;
   if model <> Nil then
   begin
+    StringGrid1.BeginUpdate;
     if CastleApp.IsReady then
       begin
 //        CastleApp.Stage.Center := Vector3(0,0,0);
@@ -435,11 +444,12 @@ begin
 
     StringGrid1.Cells[1,12] := FormatFloat('###0.000', CastleApp.Zoom);
     StringGrid1.Cells[1,13] := FormatFloat('###0.00', RadToDeg(CastleApp.FieldOfView));
+    StringGrid1.EndUpdate;
   end;
 
 end;
 
-procedure TForm1.UpdateCamInfo;
+procedure TForm1.UpdateCamInfo(Sender: TObject);
 var
   cam: TCastleCamera;
 begin
@@ -449,6 +459,7 @@ begin
 //    CastleApp.ApplyView;
     if Assigned(cam) then
       begin
+        StringGrid2.BeginUpdate;
         if not CastleApp.Stage.BoundingBox.IsEmptyOrZero then
           begin
             StringGrid2.Cells[1,0] := FormatFloat('###0.000', CastleApp.Stage.BoundingBox.SizeX);
@@ -466,6 +477,8 @@ begin
           end;
         StringGrid2.Cells[1,12] := FormatFloat('###0.000', CastleApp.Azimuth);
         StringGrid2.Cells[1,13] := FormatFloat('###0.000', CastleApp.Inclination);
+        StringGrid2.Cells[1,14] := FormatFloat('###0.000', CastleApp.DyDx);
+        StringGrid2.EndUpdate;
       end;
   end;
 end;
@@ -491,7 +504,7 @@ begin
   if WheelDelta < 0 then
     CastleApp.ZoomIn(factor);
   UpdateModelInfo;
-  UpdateCamInfo;
+  UpdateCamInfo(Self);
 end;
 
 procedure TForm1.LayoutViewResize(Sender: TObject);
@@ -638,7 +651,10 @@ var
 begin
   if Assigned(CastleApp) then
     begin
-      frame := TFrameExport.Create(Self, 256,256);
+//      CastleApp.CreateSpriteImage(CastleApp.Stage, 512, 512, False);
+//      CastleApp.SaveBuffer('../../testcs01.png');
+
+      frame := TFrameExport.Create(Self, 1280,1280);
       frame.GrabFromCastleApp(CastleApp);
       frame.Save('../../test.png');
       frame.Clear;
@@ -732,7 +748,7 @@ begin
   if Assigned(CastleApp) and Assigned(CastleApp.Camera) then
   begin
     CastleApp.Camera.Pan := CastleApp.Camera.Pan + Vector2(OX,OY);
-    UpdateCamInfo;
+    UpdateCamInfo(Self);
   end;
 end;
 
@@ -740,19 +756,19 @@ procedure TForm1.NewModel(Sender: TObject; const AModel: TCastleModel);
 begin
   UpdateModelInfo;
 //  CastleApp.ResizeView;
-  UpdateCamInfo;
+  UpdateCamInfo(Self);
 end;
 
 procedure TForm1.InclineCamera(Sender: TObject; const ARotation: Single);
 begin
   CastleApp.Inclination := ARotation;
-  UpdateCamInfo;
+  UpdateCamInfo(Self);
 end;
 
 procedure TForm1.RotateCamera(Sender: TObject; const ARotation: Single);
 begin
   CastleApp.Azimuth := ARotation;
-  UpdateCamInfo;
+  UpdateCamInfo(Self);
 end;
 
 procedure TForm1.RotateModel(Sender: TObject; const ARotation: Single);
@@ -764,11 +780,11 @@ begin
   begin
     model.Rotation := Vector4(0,1,0,ARotation);
     UpdateModelInfo;
-    UpdateCamInfo;
+    UpdateCamInfo(Self);
   end;
 end;
 
-procedure TForm1.Layout4Resize(Sender: TObject);
+procedure TForm1.LayoutRightResize(Sender: TObject);
 begin
 {
   Switch3D.Width := Layout4.Width - 16;
@@ -797,13 +813,13 @@ begin
     end;
   CastleApp.SwitchView3D(Switch3D.IsChecked);
   UpdateModelInfo;
-  UpdateCamInfo;
+  UpdateCamInfo(Self);
 end;
 
 procedure TForm1.TabCameraClick(Sender: TObject);
 begin
   CastleControl.SetFocus;
-  UpdateCamInfo;
+  UpdateCamInfo(Self);
 end;
 
 procedure TForm1.TabModelClick(Sender: TObject);

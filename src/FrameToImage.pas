@@ -21,11 +21,10 @@ type
 
   TFrameExport = class(TComponent)
   private
-    fView: TCastleUserInterface;
     fWidth: Integer;
     fHeight: Integer;
     fViewport: TCastleViewport;
-    fStage: TCastleScene;
+    fStage: TCastleModel;
     fCamera: TSphericalCamera;
     fCameraLight: TCastleDirectionalLight;
     fAzimuth: Single;
@@ -33,6 +32,7 @@ type
     fZoomFactor2D: Single;
     fTransparent: Boolean;
     fImageBuffer: TCastleImage;
+    fLastModel: TCastleModel;
   public
     procedure CreateViewport;
     constructor Create(AOwner: TComponent); overload; override;
@@ -40,7 +40,7 @@ type
     destructor Destroy; override;
     procedure Clear;
     procedure GrabFromCastleApp(ACastleApp: TCastleApp);
-    procedure AddModel(const AModel: TCastleScene);
+    procedure AddModel(const AModel: TCastleModel);
     procedure Grab(AContainer: TCastleContainer);
     procedure Save(const AFilename: String);
     property Azimuth: Single read fAzimuth write fAzimuth;
@@ -52,7 +52,7 @@ type
 
 implementation
 
-uses CastleProjection, CastleGLImages, CastleRectangles, CastleLog;
+uses CastleProjection, CastleGLImages, CastleRectangles, CastleLog, X3DLoad;
 
 constructor TFrameExport.Create(AOwner: TComponent);
 begin
@@ -60,13 +60,14 @@ begin
   fTransparent := True;
 end;
 
-procedure TFrameExport.AddModel(const AModel: TCastleScene);
+procedure TFrameExport.AddModel(const AModel: TCastleModel);
 var
-  ClonedModel: TCastleScene;
+  ClonedModel: TCastleModel;
 begin
-  ClonedModel := AModel.Clone(nil);
+  ClonedModel := AModel.Clone(fStage) as TCastleModel;
+  ClonedModel.UpdateModel(AModel);
+  ClonedModel.Normalize;
   fStage.Add(ClonedModel);
-  ClonedModel.Free;
 end;
 
 procedure TFrameExport.Clear;
@@ -86,17 +87,16 @@ end;
 
 procedure TFrameExport.CreateViewport;
 begin
-  fView := TCastleUserInterface.Create(Self);
   fViewport := TCastleViewport.Create(Self);
   fViewport.FullSize := False;
   fViewport.Width := fWidth;
   fViewport.Height := fHeight;
   fViewport.Transparent := True;
 
-  fStage := TCastleScene.Create(Self);
+  fStage := TCastleModel.Create(Self);
   fViewport.Items.Add(fStage);
 
-  fCamera := TSphericalCamera.Create(fViewport);
+  fCamera := TSphericalCamera.Create(Self);
   fCamera.ProjectionType := ptOrthographic;
   fCamera.Orthographic.Origin := Vector2(0.5, 0.5);
 
@@ -106,8 +106,6 @@ begin
   fViewport.Items.Add(fCamera);
 
   fViewport.Camera := fCamera.Camera;
-
-  fView.InsertFront(fViewPort);
 end;
 
 destructor TFrameExport.Destroy;
@@ -122,7 +120,8 @@ begin
   fAzimuth := ACastleApp.Azimuth;
   fInclination := ACastleApp.Inclination;
   fZoomFactor2D := ACastleApp.Zoom;
-  AddModel(ACastleApp.SelectedModel);
+  if Assigned(ACastleApp.SelectedModel) then
+    AddModel(ACastleApp.SelectedModel);
   Grab(ACastleApp.Container);
 end;
 
@@ -138,15 +137,13 @@ begin
     Image := TDrawableImage.Create(RGBA, true, true);
 
     try
-      Image.RenderToImageBegin;
-
       fViewport.Transparent := fTransparent;
 
       if fCamera.ProjectionType <> ptOrthographic then
         begin
           fCamera.ProjectionType := ptOrthographic;
         end;
-      fViewport.Setup2D;
+
       fCamera.Orthographic.Width := fZoomFactor2D;
       fCamera.Orthographic.Height := 0;
       fCamera.ViewFromSphere(1, fAzimuth, fInclination);
@@ -155,13 +152,11 @@ begin
       fCamera.Camera.Direction := Vector3(0.707, 0, 0.707);
       fCamera.Camera.Position := Vector3(0,0,1);
       }
-      WriteLnLog(' Grab Cam = ' + fCamera.Camera.Up.ToString + ' - ' + fCamera.Camera.Direction.ToString + ' - ' + fCamera.Camera.Position.ToString);
 
-      Image.RenderToImageEnd;
+      Image.RenderToImageBegin;
       ViewportRect := Rectangle(0, 0, fWidth, fHeight);
-
-  //    fView.RenderControl(fViewport,ViewportRect);
-      AContainer.RenderControl(fView,ViewportRect);
+      AContainer.RenderControl(fViewport,ViewportRect);
+      Image.RenderToImageEnd;
 
       try
         if fTransparent then

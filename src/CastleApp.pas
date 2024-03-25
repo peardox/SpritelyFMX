@@ -1,5 +1,6 @@
 unit CastleApp;
 
+{$define AppGrab}
 interface
 
 uses
@@ -9,6 +10,9 @@ uses
   CastleViewport,
   CastleTransform,
   CastleDebugTransform,
+{$ifdef AppGrab}
+  CastleImages,
+{$endif}
   CastleScene,
   CastleHelpers,
   CastleModel,
@@ -41,18 +45,23 @@ type
     fModels: TModelPack;
     FDoExtMessage: TPDXMessageEvent;
     FDoOnModel: TPDXModelEvent;
+    fCameraChange: TNotifyEvent;
     FSelectedModel: TCastleModel;
     fWaitingModel: TCastleModel;
     fCamWidth: Single;
     fCamHeight: Single;
     fAxis: TAxisGrid;
+    fDyDx: Single;
     fIsReady: Boolean;
     fWaitingToFit: Boolean;
+{$ifdef AppGrab}
+    fImageBuffer: TCastleImage;
+{$endif}
     procedure SendMessage(const AMsg: String);
     procedure SetDoExtMessage(const AProc: TPDXMessageEvent);
     procedure SetDoOnModel(const AProc: TPDXModelEvent);
-//    function CreateDirectionalLight(LightPos: TVector3): TCastleDirectionalLight;
     procedure DoOnModel(const AModel: TCastleModel);
+    procedure DoOnCamera(Sender: TObject);
     procedure LoadViewport;
     function GetSelectedModel: TCastleModel;
     procedure SetSelectedModel(const AModel: TCastleModel);
@@ -62,10 +71,17 @@ type
     function GetFOV: Single;
     procedure SetFOV(const AValue: Single);
     procedure StageApplyBox;
+    procedure SetInclination(const AValue: Single);
+    procedure SetAzimuth(const AValue: Single);
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+{$ifdef AppGrab}
+    procedure CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False);
+    procedure Grab(const AWidth: Integer; const AHeight: Integer);
+    procedure SaveBuffer(const AFilename: String);
+{$endif}
     procedure SwitchView3D(const Use3D: Boolean);
     function AddModel(const AFilename: String): TCastleModel;
     function CloneModel(const AModel: TCastleModel): TCastleModel;
@@ -84,8 +100,8 @@ type
     property OnModel: TPDXModelEvent read FDoOnModel write SetDoOnModel;
     property SelectedModel: TCastleModel read GetSelectedModel write SetSelectedModel;
     property Camera: TSphericalCamera read fCamera write fCamera;
-    property Azimuth: Single read fAzimuth write fAzimuth;
-    property Inclination: Single read fInclination write fInclination;
+    property Azimuth: Single read fAzimuth write SetAzimuth;
+    property Inclination: Single read fInclination write SetInclination;
     property Zoom: Single read GetZoom write SetZoom;
     property Viewport: TCastleViewport read fViewport write fViewport;
     property Stage: TCastleModel read fStage write fStage;
@@ -93,6 +109,8 @@ type
     property CamWidth: Single read fCamWidth write fCamWidth;
     property FieldOfView: Single read GetFOV write SetFOV;
     property IsReady: Boolean read fIsReady;
+    property DyDx: Single read fDyDx;
+    property OnCameraChange: TNotifyEvent read fCameraChange write fCameraChange;
 
   end;
 
@@ -105,6 +123,9 @@ uses
   Math,
   X3DLoad,
   CastleLog,
+{$ifdef AppGrab}
+  CastleGLImages,
+{$endif}
   CastleUriUtils,
   CastleRectangles,
   SpritelySettings,
@@ -382,8 +403,18 @@ end;
 
 destructor TCastleApp.Destroy;
 begin
+{$ifdef AppGrab}
+  if Assigned(fImageBuffer) then
+    fImageBuffer.Free;
+{$endif}
   fModels.Free;
   inherited;
+end;
+
+procedure TCastleApp.DoOnCamera(Sender: TObject);
+begin
+  if Assigned(fCameraChange) then
+    fCameraChange(Sender);
 end;
 
 procedure TCastleApp.DoOnModel(const AModel: TCastleModel);
@@ -405,6 +436,12 @@ begin
     FDoExtMessage(Self, AMsg);
 end;
 
+procedure TCastleApp.SetAzimuth(const AValue: Single);
+begin
+  fAzimuth := AValue;
+  DoOnCamera(Self);
+end;
+
 procedure TCastleApp.SetDoExtMessage(const AProc: TPDXMessageEvent);
 begin
   FDoExtMessage := AProc;
@@ -421,6 +458,12 @@ begin
     fZoomFactor3D := fCamera.Perspective.FieldOfView
   else
     fZoomFactor2D := fCamera.Perspective.FieldOfView; // Temp duff value
+end;
+
+procedure TCastleApp.SetInclination(const AValue: Single);
+begin
+  fInclination := AValue;
+  DoOnCamera(Self);
 end;
 
 procedure TCastleApp.SetSelectedModel(const AModel: TCastleModel);
@@ -536,6 +579,8 @@ var
   Extents: TExtents;
   RX, RY: TVector2;
   I: Integer;
+  LeftGround, BottomGround: Integer;
+  tmp: Single;
 begin
   Result := Default(TViewStats);
 
@@ -567,6 +612,8 @@ begin
 
         RX := Vector2(9999999, 9999999);
         RY := Vector2(-9999999, -9999999);
+        LeftGround := -1;
+        BottomGround := -1;
 
         for I := 0 to Length(Result.GroundRect) - 1 do
             begin
@@ -574,17 +621,52 @@ begin
                 RX := Result.GroundRect[I];
               if Result.GroundRect[I].Y > RY.Y then
                 RY := Result.GroundRect[I];
+              if I = 0 then
+                begin
+                  LeftGround := 0;
+                  BottomGround := 0;
+                end
+              else
+                begin
+                  if LeftGround <> -1 then
+                    begin
+                      if Result.GroundRect[LeftGround].X > Result.GroundRect[I].X then
+                        LeftGround := I
+                      else if Result.GroundRect[LeftGround].X > Result.GroundRect[I].X then
+                        LeftGround := -1;
+                    end;
+
+                  if BottomGround <> -1 then
+                    begin
+                      if Result.GroundRect[BottomGround].Y > Result.GroundRect[I].Y then
+                        BottomGround := I
+                      else if Result.GroundRect[BottomGround].Y > Result.GroundRect[I].Y then
+                        BottomGround := -1;
+                    end;
+
+                end;
             end;
         Result.Diagonal := Vector2(abs(RX.X - RY.X),abs(RX.Y - RY.Y));
-        if(Result.Diagonal.X > 1) and (Result.Diagonal.Y > 1) then
+        if(LeftGround <> -1) and (BottomGround <> -1) and (LeftGround <> BottomGround) then
           begin
-            Result.DyDx := (Result.Diagonal.Y / Result.Diagonal.X);
+            tmp := abs(Result.GroundRect[LeftGround].X - Result.GroundRect[BottomGround].X);
+
+            if tmp = 0 then
+              fDyDx := 0
+            else
+              fDyDx := (abs(Result.GroundRect[LeftGround].Y - Result.GroundRect[BottomGround].Y) / tmp);
+            Result.DyDx := fDyDx;
           end
         else
-          Result.DyDx := 0;
+          begin
+            fDyDx := 0;
+            Result.DyDx := fDyDx;
+          end;
 
         if (Result.Box.View2D.Width > 1) and (Result.Box.View2D.Height > 1) then
           Result.isValid := True;
+
+        DoOnCamera(Self);
       end;
     end;
 end;
@@ -605,6 +687,134 @@ begin
       DrawRectangleOutline(ViewStats.Box.View2D, Yellow);
     end;
 end;
+
+{$ifdef AppGrab}
+procedure TCastleApp.Grab(const AWidth: Integer; const AHeight: Integer);
+var
+  Image: TDrawableImage;
+  RGBA: TRGBAlphaImage;
+  ViewportRect: TRectangle;
+begin
+  try
+    RGBA := TRGBAlphaImage.Create(AWidth, AHeight);
+    RGBA.ClearAlpha(0);
+    Image := TDrawableImage.Create(RGBA, true, true);
+
+    try
+      Image.RenderToImageBegin;
+      ViewportRect := Rectangle(0, 0, AWidth, AHeight);
+      Container.RenderControl(fViewport,ViewportRect);
+      Image.RenderToImageEnd;
+      try
+        if fViewport.Transparent then
+          fImageBuffer := Image.GetContents(TRGBAlphaImage)
+        else
+          fImageBuffer := Image.GetContents(TRGBImage);
+      except
+        on E : Exception do
+          raise Exception.Create('Inner Exception ' + E.ClassName + ' - ' + E.Message);
+      end;
+    except
+      on E : Exception do
+        raise Exception.Create('Outer Exception ' + E.ClassName + ' - ' + E.Message);
+    end;
+  finally
+    FreeAndNil(Image);
+  end;
+
+end;
+
+procedure TCastleApp.SaveBuffer(const AFilename: String);
+begin
+  if Assigned(fImageBuffer) then
+    SaveImage(fImageBuffer, AFilename);
+end;
+
+procedure TCastleApp.CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False);
+var
+  SourceViewport: TCastleViewport;
+  CloneScene: TCastleModel;
+  ViewportRect: TRectangle;
+  Image: TDrawableImage;
+  BackImage: TRGBAlphaImage;
+begin
+  SourceViewport := nil;
+
+  if not(SourceScene = nil) and (TextureWidth > 0) and (TextureHeight > 0) then
+    begin
+      try
+        try
+          SourceViewport := TCastleViewport.Create(nil);
+
+          if isSpriteTransparent then
+            begin
+              SourceViewport.Transparent := True;
+              SourceViewport.BackgroundColor := Vector4(1,1,1,0);
+            end
+          else
+            begin
+              SourceViewport.Transparent := False;
+              SourceViewport.BackgroundColor := Vector4(0,0,0,1);
+            end;
+
+          SourceViewport.AutoCamera := False;
+          SourceViewport.Setup2D;
+          SourceViewport.Camera.ProjectionType := ptOrthographic;
+          SourceViewport.Camera.Orthographic.Origin := Vector2(0.5, 0.5);
+
+          SourceViewport.Width := TextureWidth;
+          SourceViewport.Height := TextureHeight;
+
+          CloneScene := SourceScene.Clone(nil) as TCastleModel;
+          CloneScene.Normalize;
+
+          SourceViewport.Camera.Orthographic.Scale := fZoomFactor2D;
+
+          SourceViewport.Items.UseHeadlight := hlMainScene;
+          SourceViewport.Items.Add(CloneScene);
+          SourceViewport.Items.MainScene := CloneScene;
+
+          SourceViewport.Height := Trunc(TextureHeight);
+
+
+          BackImage := TRGBAlphaImage.Create(Trunc(TextureWidth), Trunc(TextureHeight));
+          BackImage.ClearAlpha(0);
+          Image := TDrawableImage.Create(BackImage, true, true);
+          Image.RenderToImageBegin;
+
+          ViewportRect := Rectangle(0, 0, Trunc(TextureWidth), Trunc(TextureHeight));
+          Container.RenderControl(SourceViewport,ViewportRect);
+
+          Image.RenderToImageEnd;
+
+          if not False { Application.OpenGLES } then
+          begin
+            try
+              fImageBuffer := Image.GetContents(TRGBAlphaImage);
+            except
+              on E : Exception do
+                begin
+                  Raise Exception.Create(E.ClassName + sLineBreak + E.Message);
+                end;
+            end;
+          end;
+
+        except
+          on E : Exception do
+            begin
+              Raise Exception.Create(E.ClassName + sLineBreak + E.Message);
+            end;
+        end;
+      finally
+        FreeAndNil(SourceViewport);
+        FreeAndNil(Image);
+        CloneScene.Free;
+      end;
+    end;
+end;
+
+{$endif}
+
 
 end.
 

@@ -316,6 +316,10 @@ begin
   inherited;
   fViewport.Width := Container.UnscaledWidth;
   fViewport.Height := Container.UnscaledHeight;
+  SendMessage(Format('%8.4f %8.4f' + sLineBreak + '%8.4f %8.4f',[
+    fViewport.EffectiveRect.Width, fViewport.EffectiveRect.Height,
+    fCamera.Orthographic.EffectiveRect.Width, fCamera.Orthographic.EffectiveRect.Height
+    ]));
 end;
 
 procedure TCastleApp.ResizeView;

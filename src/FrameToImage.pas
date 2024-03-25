@@ -67,6 +67,7 @@ begin
   ClonedModel := AModel.Clone(fStage) as TCastleModel;
   ClonedModel.UpdateModel(AModel);
   ClonedModel.Normalize;
+  ClonedModel.Translation := -ClonedModel.GetOriginOffset;
   fStage.Add(ClonedModel);
 end;
 
@@ -147,6 +148,7 @@ begin
       fCamera.Orthographic.Width := fZoomFactor2D;
       fCamera.Orthographic.Height := 0;
       fCamera.ViewFromSphere(1, fAzimuth, fInclination);
+
       {
       fCamera.Camera.Up := Vector3(0,1,0);
       fCamera.Camera.Direction := Vector3(0.707, 0, 0.707);

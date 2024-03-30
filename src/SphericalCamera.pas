@@ -20,6 +20,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure ReCenter(const APan: TVector2);
     procedure ViewFromSphere(const ARadius, AzimuthValue, InclinationValue: Single); overload;
     procedure ViewFromSphere(const ARadius: Single; const AzimuthValue: Single; const InclinationValue : Single; const ALookAt: TVector3); overload;
     property ProjectionType: TProjectionType read GetProjectionType write SetProjectionType default ptPerspective;
@@ -43,6 +44,15 @@ begin
   fCamera.Translation := Vector3(0,0,0);
   fPan := Vector2(0,0);
   fLookAt := Vector3(0,0,0);
+end;
+
+procedure TSphericalCamera.ReCenter(const APan: TVector2);
+var
+  pPos, pDir, pUp, pSide: TVector3;
+begin
+  fCamera.GetWorldView(pPos, pDir, pUp);
+  pSide := TVector3.CrossProduct(pDir, pUp);
+  fCamera.SetWorldView(pPos + APan.X * pSide + APan.Y * pUp, pDir, pUp);
 end;
 
 destructor TSphericalCamera.Destroy;
@@ -87,6 +97,8 @@ begin
     fCamera.Translation := Vector3(0, 0, ARadius);
     // + fLookAt;
 
+  if not(InclinationValue > (-Pi/2)) then
+    WriteLnLog('Inc bad');
   Rotation := Vector4(0,1,0,AzimuthValue);
   fInclinationTransform.Rotation := Vector4(1,0,0,InclinationValue);
   fCamera.Direction := -fCamera.Translation.Normalize;

@@ -11,20 +11,22 @@ uses
 type
 // TPDXMessageEvent = procedure (Sender: TObject; const Msg: String) of object;
   TfrmLoadingDialog = class(TForm)
-    FormText: TLabel;
     Panel1: TPanel;
     ProgressBar1: TProgressBar;
     Memo1: TMemo;
+    Label1: TLabel;
     procedure BtnCancelClick(Sender: TObject);
     procedure BtnOKClick(Sender: TObject);
   private
     { Private declarations }
+    ProcessedFiles: Integer;
+    TotalFiles: Integer;
     fOnFile: TPDXMessageEvent;
     procedure FormReset;
     procedure SetDoOnFile(const AProc: TPDXMessageEvent);
   public
     { Public declarations }
-    procedure Setup(const MessageText: String);
+    procedure Setup(const NumFiles: Integer);
     procedure AddingFile(const AFile: String);
     property OnFile: TPDXMessageEvent read fOnFile write SetDoOnFile;
   end;
@@ -41,6 +43,10 @@ end;
 procedure TfrmLoadingDialog.AddingFile(const AFile: String);
 begin
   Memo1.Lines.Add(AFile);
+  Memo1.GoToTextEnd;
+  Application.ProcessMessages;
+  ProgressBar1.Value := ProgressBar1.Value + 1;
+  Label1.Text := Format('(%3.0f of %3.0f)',[ProgressBar1.Value, ProgressBar1.Max]);
   Application.ProcessMessages;
 end;
 
@@ -54,10 +60,15 @@ begin
   fOnFile := AProc;
 end;
 
-procedure TfrmLoadingDialog.Setup(const MessageText: String);
+procedure TfrmLoadingDialog.Setup(const NumFiles: Integer);
 begin
   FormReset;
-  FormText.Text := MessageText;
+  ProcessedFiles := 0;
+  TotalFiles := NumFiles;
+  ProgressBar1.Value := 0;
+  ProgressBar1.Max := NumFiles;
+  Label1.Text := Format('(%3.0f of %3.0f)',[ProgressBar1.Value, ProgressBar1.Max]);
+
 end;
 
 procedure TfrmLoadingDialog.FormReset;

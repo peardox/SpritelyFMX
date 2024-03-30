@@ -64,6 +64,7 @@ __recovery/
 
 # Directory Specific
 
+test.png
 Styles/Sterling.Win.style
 *.stat
 modules/

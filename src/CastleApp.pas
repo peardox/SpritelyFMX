@@ -11,11 +11,9 @@ uses
   CastleViewport,
   CastleTransform,
   CastleDebugTransform,
-{$ifdef AppGrab}
-  CastleImages,
-{$endif}
   CastleScene,
   CastleHelpers,
+  CastleControls,
   CastleModel,
   SphericalCamera,
   SpritelyAxisGrid,
@@ -34,6 +32,7 @@ type
     { Private declarations }
     fZoomFactor2D: Single;
     fZoomFactor3D: Single;
+    fNewPan: TVector2;
     fUniverse: TCastleScene;
     fStage: TCastleModel;
     fUse3D: Boolean;
@@ -43,6 +42,7 @@ type
     fInclination: Single;
     fCameraLight: TCastleDirectionalLight;
     fViewport: TCastleViewport;
+    fLabel: TCastleLabel;
     fModels: TModelPack;
     FDoExtMessage: TPDXMessageEvent;
     FDoOnModel: TPDXModelEvent;
@@ -56,9 +56,6 @@ type
     fFrame: Integer;
     fIsReady: Boolean;
     fWaitingToFit: Boolean;
-{$ifdef AppGrab}
-    fImageBuffer: TCastleImage;
-{$endif}
     procedure SendMessage(const AMsg: String);
     procedure SetDoExtMessage(const AProc: TPDXMessageEvent);
     procedure SetDoOnModel(const AProc: TPDXModelEvent);
@@ -75,17 +72,14 @@ type
     procedure StageApplyBox;
     procedure SetInclination(const AValue: Single);
     procedure SetAzimuth(const AValue: Single);
+    procedure CreateLabel(var objLabel: TCastleLabel; const Line: Integer; const BottomUp: Boolean = True);
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-{$ifdef AppGrab}
-    procedure CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False);
-    procedure Grab(const AWidth: Integer; const AHeight: Integer);
-    procedure SaveBuffer(const AFilename: String);
-{$endif}
     procedure SwitchView3D(const Use3D: Boolean);
     function AddModel(const AFilename: String): TCastleModel;
+    function PreloadModel(const AFilename: String): TCastleModel;
     function CloneModel(const AModel: TCastleModel): TCastleModel;
     procedure RemoveModel(const AModel: TCastleModel);
     procedure RemoveModels;
@@ -96,7 +90,7 @@ type
     procedure DeselectModels;
     procedure ZoomOut(const factor: Integer = 1);
     procedure ZoomIn(const factor: Integer = 1);
-    function GetAxis(const AModel: TCastleModel): TViewStats;
+//    function GetAxis(const AModel: TCastleModel): TViewStats;
     property Models: TModelPack read fModels write fModels;
     property OnExtMessage: TPDXMessageEvent read FDoExtMessage write SetDoExtMessage;
     property OnModel: TPDXModelEvent read FDoOnModel write SetDoOnModel;
@@ -113,7 +107,7 @@ type
     property IsReady: Boolean read fIsReady;
     property DyDx: Single read fDyDx;
     property OnCameraChange: TNotifyEvent read fCameraChange write fCameraChange;
-
+    property NewPan: TVector2 read fNewPan write fNewPan;
   end;
 
 const
@@ -125,9 +119,6 @@ uses
   Math,
   X3DLoad,
   CastleLog,
-{$ifdef AppGrab}
-  CastleGLImages,
-{$endif}
   CastleUriUtils,
   CastleRectangles,
   SpritelySettings,
@@ -136,7 +127,7 @@ uses
 constructor TCastleApp.Create(AOwner: TComponent);
 begin
   inherited;
-  fZoomFactor2D := 2.0;
+  fZoomFactor2D := 1.0;
   fZoomFactor3D := 75.0;
   fIsReady := False;
   fWaitingToFit := False;
@@ -161,7 +152,9 @@ begin
       model := fModels.AddModel(SystemSettings.LastModel);
       fStage.Add(model);
       fAxis.SetGround(model);
+      model.ShowDebugBox(True);
       model.SelectModel;
+      model.SetInfo;
       DoOnModel(model);
       FitViewToModel(model);
     end
@@ -171,6 +164,7 @@ begin
       fStage.Add(model);
       fAxis.SetGround(model);
       model.SelectModel;
+      model.SetInfo;
       DoOnModel(model);
       FitViewToModel(model);
     end;
@@ -207,10 +201,13 @@ end;
 
 procedure TCastleApp.SetZoom(const AValue: Single);
 begin
-  if fUse3D then
-    fZoomFactor3D := AValue
-  else
-    fZoomFactor2D := AValue;
+  if AValue > 0 then
+    begin
+      if fUse3D then
+        fZoomFactor3D := AValue
+      else
+        fZoomFactor2D := AValue;
+    end;
 end;
 
 function TCastleApp.UnderMouse: TCastleTransform;
@@ -307,8 +304,25 @@ begin
   fViewport.Items.Add(fCamera);
   fViewport.Camera := fCamera.Camera;
 
+  CreateLabel(fLabel, 0);
+
   InsertFront(fViewport);
 
+end;
+
+procedure TCastleApp.CreateLabel(var objLabel: TCastleLabel; const Line: Integer; const BottomUp: Boolean = True);
+begin
+  objLabel := TCastleLabel.Create(Self);
+  objLabel.Padding := 5;
+  objLabel.Color := White;
+  objLabel.Frame := True;
+  objLabel.FrameColor := Black;
+  objLabel.Anchor(hpLeft, 10);
+  if BottomUp then
+    objLabel.Anchor(vpBottom, 10 + (Line * 35))
+  else
+    objLabel.Anchor(vpTop, -(10 + (Line * 35)));
+  InsertFront(objLabel);
 end;
 
 procedure TCastleApp.Resize;
@@ -316,10 +330,6 @@ begin
   inherited;
   fViewport.Width := Container.UnscaledWidth;
   fViewport.Height := Container.UnscaledHeight;
-  SendMessage(Format('%8.4f %8.4f' + sLineBreak + '%8.4f %8.4f',[
-    fViewport.EffectiveRect.Width, fViewport.EffectiveRect.Height,
-    fCamera.Orthographic.EffectiveRect.Width, fCamera.Orthographic.EffectiveRect.Height
-    ]));
 end;
 
 procedure TCastleApp.ResizeView;
@@ -332,6 +342,11 @@ begin
 end;
 
 
+function TCastleApp.PreloadModel(const AFilename: String): TCastleModel;
+begin
+  Result := fModels.AddModel(AFilename);
+end;
+
 function TCastleApp.AddModel(const AFilename: String): TCastleModel;
 var
   model: TCastleModel;
@@ -341,7 +356,7 @@ begin
     begin
       if not fStageMultipleModels then
         begin
-          fStage.Clear;
+          fStage.ClearAndFreeItems;
           fSelectedModel := Nil;
           StageApplyBox;
         end;
@@ -375,7 +390,7 @@ begin
     begin
       if not fStageMultipleModels then
         begin
-          fStage.Clear;
+          fStage.ClearAndFreeItems;
           fSelectedModel := Nil;
           StageApplyBox;
         end;
@@ -412,11 +427,11 @@ end;
 
 destructor TCastleApp.Destroy;
 begin
-{$ifdef AppGrab}
-  if Assigned(fImageBuffer) then
-    fImageBuffer.Free;
+{$ifdef showfree}
+  WriteLnLog('Freeing TCastleApp');
 {$endif}
-  fModels.Free;
+  if Assigned(fModels) then
+    FreeAndNil(fModels);
   inherited;
 end;
 
@@ -484,6 +499,7 @@ end;
 procedure TCastleApp.RemoveModel(const AModel: TCastleModel);
 begin
   fStage.Remove(AModel);
+  FreeAndNil(AModel);
 end;
 
 procedure TCastleApp.RemoveModels;
@@ -510,7 +526,7 @@ begin
       if fCamera.ProjectionType <> ptPerspective then
         begin
           fCamera.ProjectionType := ptPerspective;
-          fCamera.Perspective.FieldOfView := Pi / 4; // 360);
+          fCamera.Perspective.FieldOfView := Pi / 90;
         end;
       fCamera.ViewFromSphere(fZoomFactor3D, fAzimuth, fInclination);
     end
@@ -541,7 +557,8 @@ var
 begin
   if fIsReady then
     begin
-      V := GetAxis(Model);
+      V := fViewport.GetAxis(Model);
+//              DoOnCamera(Self);
 
       vertScale := V.Box.View2D.Height / fViewport.Height;
       horizScale := V.Box.View2D.Width / fViewport.Width;
@@ -565,7 +582,7 @@ begin
   fFrame := fFrame + 1;
   if Assigned(fStage) then
     begin
-      DrawAxis(GetAxis(fStage));
+      DrawAxis(fViewport.GetAxis(fStage));
 {
       fIsReady := True;
       if Assigned(fWaitingModel) then
@@ -573,112 +590,15 @@ begin
           FitViewToModel(fWaitingModel);
         end;
 }
+      fNewPan := fViewPort.CenterViewPan(fStage, fCamera.Pan);
+      if not fNewPan.IsZero(SingleEpsilon) then
+        fCamera.Pan := fNewPan;
     end;
 end;
 
 procedure TCastleApp.RenderOverChildren;
 begin
   inherited;
-end;
-
-function TCastleApp.GetAxis(const AModel: TCastleModel): TViewStats;
-var
-  Points: array[0..3] of TVector2;
-  TR, BL: TVector2;
-  SX, SY: Single;
-  Extents: TExtents;
-  RX, RY: TVector2;
-  I: Integer;
-  LeftGround, BottomGround: Integer;
-  tmp: Single;
-begin
-  Result := Default(TViewStats);
-
-  Points[0] := Vector2(0, Container.UnscaledHeight / 2);
-  Points[1] := Vector2(Container.UnscaledWidth, Container.UnscaledHeight / 2);
-  Points[2] := Vector2(Container.UnscaledWidth / 2, 0);
-  Points[3] := Vector2(Container.UnscaledWidth / 2, Container.UnscaledHeight);
-
-  if Assigned(AModel) and not(AModel.BoundingBox.IsEmptyOrZero) then
-    begin
-    Extents := Viewport.CalcAngles(AModel);
-    if Extents.isValid then
-      begin
-        BL := Viewport.WorldToViewport(AModel, Extents.Min);
-        TR := Viewport.WorldToViewport(AModel, Extents.Max);
-        SX := TR.X - BL.X;
-        SY := TR.Y - BL.Y;
-
-        Result.Box.View2D := FloatRectangle(BL, SX, SY);
-        Result.Box.View3D := FloatRectangle(
-          Vector2(Extents.Min.X, Extents.Min.Y),
-          Extents.Max.X - Extents.Min.X,
-          Extents.Max.Y - Extents.Min.Y);
-
-        Result.GroundRect[0] := Viewport.WorldToViewport(AModel, Extents.corners[0]);
-        Result.GroundRect[1] := Viewport.WorldToViewport(AModel, Extents.corners[1]);
-        Result.GroundRect[2] := Viewport.WorldToViewport(AModel, Extents.corners[5]);
-        Result.GroundRect[3] := Viewport.WorldToViewport(AModel, Extents.corners[4]);
-
-        RX := Vector2(9999999, 9999999);
-        RY := Vector2(-9999999, -9999999);
-        LeftGround := -1;
-        BottomGround := -1;
-
-        for I := 0 to Length(Result.GroundRect) - 1 do
-            begin
-              if Result.GroundRect[I].X < RX.X then
-                RX := Result.GroundRect[I];
-              if Result.GroundRect[I].Y > RY.Y then
-                RY := Result.GroundRect[I];
-              if I = 0 then
-                begin
-                  LeftGround := 0;
-                  BottomGround := 0;
-                end
-              else
-                begin
-                  if LeftGround <> -1 then
-                    begin
-                      if Result.GroundRect[LeftGround].X > Result.GroundRect[I].X then
-                        LeftGround := I
-                      else if Result.GroundRect[LeftGround].X > Result.GroundRect[I].X then
-                        LeftGround := -1;
-                    end;
-
-                  if BottomGround <> -1 then
-                    begin
-                      if Result.GroundRect[BottomGround].Y > Result.GroundRect[I].Y then
-                        BottomGround := I
-                      else if Result.GroundRect[BottomGround].Y > Result.GroundRect[I].Y then
-                        BottomGround := -1;
-                    end;
-
-                end;
-            end;
-        Result.Diagonal := Vector2(abs(RX.X - RY.X),abs(RX.Y - RY.Y));
-        if(LeftGround <> -1) and (BottomGround <> -1) and (LeftGround <> BottomGround) then
-          begin
-            tmp := abs(Result.GroundRect[LeftGround].X - Result.GroundRect[BottomGround].X);
-
-            if tmp = 0 then
-              fDyDx := 0
-            else
-              fDyDx := (abs(Result.GroundRect[LeftGround].Y - Result.GroundRect[BottomGround].Y) / tmp);
-            Result.DyDx := fDyDx;
-          end
-        else
-          begin
-            fDyDx := 0;
-            Result.DyDx := fDyDx;
-          end;
-
-        if (Result.Box.View2D.Width > 1) and (Result.Box.View2D.Height > 1) then
-          Result.isValid := True;
-
-        DoOnCamera(Self);
-      end;
-    end;
 end;
 
 function TCastleApp.GetFOV: Single;
@@ -697,136 +617,6 @@ begin
       DrawRectangleOutline(ViewStats.Box.View2D, Yellow);
     end;
 end;
-
-{$ifdef AppGrab}
-procedure TCastleApp.Grab(const AWidth: Integer; const AHeight: Integer);
-var
-  Image: TDrawableImage;
-  RGBA: TRGBAlphaImage;
-  ViewportRect: TRectangle;
-begin
-  try
-    RGBA := TRGBAlphaImage.Create(AWidth, AHeight);
-    RGBA.ClearAlpha(0);
-    Image := TDrawableImage.Create(RGBA, true, true);
-
-    try
-      Image.RenderToImageBegin;
-      ViewportRect := Rectangle(0, 0, AWidth, AHeight);
-      Container.RenderControl(fViewport,ViewportRect);
-      Image.RenderToImageEnd;
-      try
-        if fViewport.Transparent then
-          fImageBuffer := Image.GetContents(TRGBAlphaImage)
-        else
-          fImageBuffer := Image.GetContents(TRGBImage);
-      except
-        on E : Exception do
-          raise Exception.Create('Inner Exception ' + E.ClassName + ' - ' + E.Message);
-      end;
-    except
-      on E : Exception do
-        raise Exception.Create('Outer Exception ' + E.ClassName + ' - ' + E.Message);
-    end;
-  finally
-    FreeAndNil(Image);
-  end;
-
-end;
-
-procedure TCastleApp.SaveBuffer(const AFilename: String);
-begin
-  if Assigned(fImageBuffer) then
-    SaveImage(fImageBuffer, AFilename);
-end;
-
-procedure TCastleApp.CreateSpriteImage(const SourceScene: TCastleScene; const TextureWidth: Cardinal; const TextureHeight: Cardinal; const isSpriteTransparent: Boolean = False);
-var
-  SourceViewport: TCastleViewport;
-  CloneScene: TCastleModel;
-  ViewportRect: TRectangle;
-  Image: TDrawableImage;
-  BackImage: TRGBAlphaImage;
-begin
-  SourceViewport := nil;
-
-  if not(SourceScene = nil) and (TextureWidth > 0) and (TextureHeight > 0) then
-    begin
-      try
-        try
-          SourceViewport := TCastleViewport.Create(nil);
-
-          if isSpriteTransparent then
-            begin
-              SourceViewport.Transparent := True;
-              SourceViewport.BackgroundColor := Vector4(1,1,1,0);
-            end
-          else
-            begin
-              SourceViewport.Transparent := False;
-              SourceViewport.BackgroundColor := Vector4(0,0,0,1);
-            end;
-
-          SourceViewport.AutoCamera := False;
-          SourceViewport.Setup2D;
-          SourceViewport.Camera.ProjectionType := ptOrthographic;
-          SourceViewport.Camera.Orthographic.Origin := Vector2(0.5, 0.5);
-
-          SourceViewport.Width := TextureWidth;
-          SourceViewport.Height := TextureHeight;
-
-          CloneScene := SourceScene.Clone(nil) as TCastleModel;
-{$ifdef normal}
-          CloneScene.Normalize;
-{$endif}
-
-          SourceViewport.Camera.Orthographic.Scale := fZoomFactor2D;
-
-          SourceViewport.Items.UseHeadlight := hlMainScene;
-          SourceViewport.Items.Add(CloneScene);
-          SourceViewport.Items.MainScene := CloneScene;
-
-          SourceViewport.Height := Trunc(TextureHeight);
-
-
-          BackImage := TRGBAlphaImage.Create(Trunc(TextureWidth), Trunc(TextureHeight));
-          BackImage.ClearAlpha(0);
-          Image := TDrawableImage.Create(BackImage, true, true);
-          Image.RenderToImageBegin;
-
-          ViewportRect := Rectangle(0, 0, Trunc(TextureWidth), Trunc(TextureHeight));
-          Container.RenderControl(SourceViewport,ViewportRect);
-
-          Image.RenderToImageEnd;
-
-          if not False { Application.OpenGLES } then
-          begin
-            try
-              fImageBuffer := Image.GetContents(TRGBAlphaImage);
-            except
-              on E : Exception do
-                begin
-                  Raise Exception.Create(E.ClassName + sLineBreak + E.Message);
-                end;
-            end;
-          end;
-
-        except
-          on E : Exception do
-            begin
-              Raise Exception.Create(E.ClassName + sLineBreak + E.Message);
-            end;
-        end;
-      finally
-        FreeAndNil(SourceViewport);
-        FreeAndNil(Image);
-        CloneScene.Free;
-      end;
-    end;
-end;
-
-{$endif}
-
 
 end.
 

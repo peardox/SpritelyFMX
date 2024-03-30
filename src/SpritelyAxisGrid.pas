@@ -38,15 +38,17 @@ type
 
 implementation
 
-uses Math;
+uses Math, CastleLog;
 
 constructor TAxisGrid.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  Pickable := False;
 end;
 
 destructor TAxisGrid.Destroy;
 begin
+  WriteLnLog('Freeing TAxisGrid');
   inherited;
 end;
 

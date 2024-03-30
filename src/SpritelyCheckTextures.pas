@@ -12,7 +12,6 @@ type
     fSubDir: String;
     fFileName: String;
     fGroupID: Integer;
-    fModelInfo: TModelInfo;
   public
     constructor Create(const AParentDir: String; ASubDir: String; AFileName: String; AGroupID: Integer);
     destructor Destroy; override;
@@ -21,7 +20,6 @@ type
     property SubDir: String read fSubDir write fSubDir;
     property FileName: String read fFileName write fFileName;
     property GroupID: Integer read fGroupID write fGroupID;
-    property ModelInfo: TModelInfo read fModelInfo write fModelInfo;
   end;
   TFileDirectoryList = TObjectList<TFileDirectory>;
 
@@ -251,13 +249,10 @@ begin
   fSubDir := ASubDir;
   fFileName := AFileName;
   fGroupID := AGroupID;
-  fModelInfo := Nil;
 end;
 
 destructor TFileDirectory.Destroy;
 begin
-  if Assigned(fModelInfo) then
-    FreeAndNil(fModelInfo);
   inherited;
 end;
 

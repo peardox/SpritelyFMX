@@ -1,7 +1,7 @@
 unit CastleModel;
 
  {$define normal}
-
+// {$define showfree}
 interface
 
 uses System.SysUtils, System.Types, System.UITypes, System.Classes, System.Generics.Collections,
@@ -17,7 +17,7 @@ type
   { CastleModel }
   TCastleModel = class(TCastleScene)
   private
-    fChildOf: TModelPack;
+    fChildOf: TObject; // TModelPack;
     fScale: Single;
     fInstanceCount: Integer;
     fAlign: TModelAlign;
@@ -25,6 +25,7 @@ type
     fInfo: TModelInfo;
     fOffset: TVector3;
     function GetHasDebugBox: Boolean;
+    function GetOwnerApp: TObject;
   public
     Frame: Integer;
     constructor Create(AOwner: TComponent); override;
@@ -32,7 +33,8 @@ type
     function GetNormalScale: Single;
     property NormalScale: Single read GetNormalScale write fScale;
     function Normalize: Boolean;
-    function CreateInfo: TModelInfo;
+    procedure ClearAndFreeItems;
+    function SetInfo: TModelInfo;
     function GetOriginOffset: TVector3;
     procedure SelectModel;
     procedure UpdateModel(const AModel: TCastleModel);
@@ -41,7 +43,7 @@ type
     procedure ShowDebugBox(const AValue: Boolean);
     procedure SetDebugBoxColour(const AValue: TCastleColor);
     function AlignTo(const OtherModel: TCastleModel; const Align: TModelAlign; const Pad: TVector3): TVector3;
-    procedure LoadModel(filename: String; const DoNormalize: Boolean = True);
+    procedure LoadModel(AOwner: TObject; filename: String; const DoNormalize: Boolean = True);
     property Align: TModelAlign read fAlign write fAlign;
     property DebugBox: TDebugTransformHexahedron read fDebugBox write fDebugBox;
     property HasDebugBox: Boolean read GetHasDebugBox;
@@ -75,6 +77,7 @@ type
     fIsValid: Boolean;
     fModel: TCastleModel;
     fName: String;
+    fHash: String;
     fTranslation: TVector3;
     fScale: TVector3;
     fRotation: TVector4;
@@ -84,12 +87,13 @@ type
     fAnimations: TList<String>;
     fAnimation: TAnimationInfo;
   public
-    constructor Create; overload;
-    constructor Create(const AModel: TCastleModel); overload;
+    constructor Create;
     destructor Destroy; override;
+    constructor SetInfo(const AModel: TCastleModel);
     property IsValid: Boolean read fIsValid write fIsValid;
     property Model: TCastleModel read fModel write fModel;
     property Name: String read fName write fName;
+    property Hash: String read fHash write fHash;
     property Translation: TVector3 read fTranslation write fTranslation;
     property Scale: TVector3 read fScale write fScale;
     property Rotation: TVector4 read fRotation write fRotation;
@@ -105,6 +109,7 @@ type
   TModelPack = class(TComponent)
     fChildren: TObjectList<TCastleModel>;
   private
+    fPackScale: Single;
     fDebugColor: TCastleColor;
   public
     constructor Create(AOwner: TComponent); override;
@@ -113,6 +118,7 @@ type
     function AddModel(const AFileName: String; const AlignValue: TModelAlign): TCastleModel; overload;
     procedure SetDebugBoxColour(const AValue: TCastleColor);
     property Kids: TObjectList<TCastleModel> read fChildren write fChildren;
+    property PackScale: Single read fPackScale write fPackScale;
   end;
 
 function ModelAlign(const AlignX: TModelXAlign = modelXDefined; AlignY: TModelYAlign = modelYDefined; AlignZ: TModelZAlign = modelZDefined): TModelAlign;
@@ -126,8 +132,10 @@ implementation
 uses
   Math,
   CastleApp,
+  System.Hash,
   CastleLog,
   CastleBoxes,
+  FrameToImage,
   System.IOUtils,
   CastleUriUtils;
 
@@ -326,14 +334,24 @@ begin
 
 end;
 
+procedure TCastleModel.ClearAndFreeItems;
+begin
+  while Count <> 0 do
+    begin
+      FreeAndNil(Items[0]);
+    end;
+end;
+
 constructor TCastleModel.Create(AOwner: TComponent);
 begin
-  inherited;
+  inherited Create(AOwner);
   fScale := 0.5;
   fAlign.X := modelXCenter;
   fAlign.Y := modelYCenter;
   fAlign.Z := modelZCenter;
+  fChildOf := AOwner;
   fInstanceCount := 0;
+  fInfo := TModelInfo.Create;
 {$ifdef normal}
   Normalize;
 {$endif}
@@ -342,30 +360,35 @@ end;
 
 procedure TCastleModel.DeSelectModel;
 var
-  OwningCastleApp: TCastleApp;
+  OwningCastleApp: TObject;
 begin
-  if fChildOf <> Nil then
-    begin
-      if fChildOf.Owner is TCastleApp then
-        begin
-          OwningCastleApp := fChildOf.Owner as TCastleApp;
-          OwningCastleApp.SelectedModel := Nil;
-        end;
-    end;
+  OwningCastleApp := GetOwnerApp;
+  if OwningCastleApp is TCastleApp then
+    TCastleApp(OwningCastleApp).SelectedModel := Nil;
 end;
 
 destructor TCastleModel.Destroy;
 begin
+{$ifdef showfree}
+  WriteLnLog('Freeing TCastleModel');
+{$endif}
+  if Assigned(fInfo) then
+    begin
+{$ifdef showfree}
+      WriteLnLog('Freeing TCastleModel''s TModelInfo');
+{$endif}
+      FreeAndNil(fInfo);
+    end;
   inherited;
 end;
 
-function TCastleModel.CreateInfo: TModelInfo;
+function TCastleModel.SetInfo: TModelInfo;
 begin
-  fInfo := TModelInfo.Create(Self);
+  fInfo.SetInfo(Self);
   Result := fInfo;
 end;
 
-function TCastleModel.GetNormalScale: Single;
+function TCastleModel.GetOwnerApp: TObject;
 var
   OwningCastleApp: TCastleApp;
 begin
@@ -373,31 +396,42 @@ begin
 
   if fChildOf <> Nil then
     begin
-      if fChildOf.Owner is TCastleApp then
+      if fChildOf is TCastleApp then
         begin
-          OwningCastleApp := fChildOf.Owner as TCastleApp;
+          OwningCastleApp := fChildOf as TCastleApp;
+        end
+      else if fChildOf is TModelPack then
+        begin
+          if TModelPack(fChildOf).Owner is TCastleApp then
+            begin
+              OwningCastleApp := TModelPack(fChildOf).Owner as TCastleApp;
+            end
         end
       else
         raise Exception.Create('Can''t find owning CastleApp');
-    end
-  else if Owner is TCastleApp then
-    begin
-      OwningCastleApp := Owner as TCastleApp;
     end;
 
   if not(OwningCastleApp is TCastleApp) then
     raise Exception.Create('Can''t find owning CastleApp');
 
-   Result := OwningCastleApp.Stage.fScale;
+   Result := OwningCastleApp;
 end;
 
-procedure TCastleModel.LoadModel(filename: String; const DoNormalize: Boolean = True);
+function TCastleModel.GetNormalScale: Single;
+begin
+  if fChildOf is TModelPack then
+    Result := TModelPack(fChildOf).PackScale
+  else
+    Result := fScale;
+end;
+
+procedure TCastleModel.LoadModel(AOwner: TObject; filename: String; const DoNormalize: Boolean = True);
 begin
   try
     if UriFileExists(filename) then
       begin
         Load(filename);
-        fChildOf := Nil;
+        fChildOf := AOwner;
 {$ifdef normal}
         if DoNormalize then
           Normalize;
@@ -474,7 +508,7 @@ begin
 //              Center := Vector3(CX, CY, CZ); // sbdbg
               fOffset := Vector3(CX, CY, CZ); // sbdbg
 
-              WriteLnLog('Set Center to ' + Center.ToString);
+//              WriteLnLog('Set Center to ' + Center.ToString);
 //              Translation := -BoundingBox.Center;
               Result := True;
         end;
@@ -506,17 +540,11 @@ end;
 
 procedure TCastleModel.SelectModel;
 var
-  OwningCastleApp: TCastleApp;
+  OwningCastleApp: TObject;
 begin
-  if fChildOf <> Nil then
-    begin
-      if fChildOf.Owner is TCastleApp then
-        begin
- //         SendMessage('Selecting');
-          OwningCastleApp := fChildOf.Owner as TCastleApp;
-          OwningCastleApp.SelectedModel := Self;
-        end;
-    end;
+  OwningCastleApp := GetOwnerApp;
+  if OwningCastleApp is TCastleApp then
+    TCastleApp(OwningCastleApp).SelectedModel := Self;
 end;
 
 procedure TCastleModel.SetDebugBoxColour(const AValue: TCastleColor);
@@ -544,7 +572,7 @@ begin
 //  Inc(AModel.InstanceCount);
   fAlign :=  Amodel.fAlign;
 //  fDebugBox: TDebugTransformHexahedron;
-  fInfo := Amodel.fInfo;
+//  fInfo := Amodel.fInfo;
 end;
 
 function TCastleModel.GetHasDebugBox: Boolean;
@@ -562,7 +590,6 @@ end;
 function TModelPack.AddModel(const AFileName: String): TCastleModel;
 begin
   Result := AddModel(AFileName, ModelAlignYBottom);
-//  Result := AddModel(AFileName, ModelAlignYBottom);
 end;
 
 function TModelPack.AddModel(const AFileName: String; const AlignValue: TModelAlign): TCastleModel;
@@ -600,13 +627,17 @@ end;
 constructor TModelPack.Create(AOwner: TComponent);
 begin
   inherited;
-  fChildren := TObjectList<TCastleModel>.Create(True);
+  fChildren := TObjectList<TCastleModel>.Create(False);
   fDebugColor := Green;
+  fPackScale := 1;
 end;
 
 destructor TModelPack.Destroy;
 begin
-  fChildren.Free;
+{$ifdef showfree}
+  WriteLnLog('Freeing TModelPack');
+{$endif}
+  FreeAndNil(fChildren);
   inherited;
 end;
 
@@ -624,50 +655,65 @@ begin
   fAnimations := Nil;
 end;
 
-constructor TModelInfo.Create(const AModel: TCastleModel);
+constructor TModelInfo.SetInfo(const AModel: TCastleModel);
 var
   I: Integer;
 begin
-  Create;
-  IsValid := True;
-  Model := AModel;
-  Name := TPath.GetFileName(AModel.Url);
-  Translation := AModel.Translation;
-  Scale := AModel.Scale;
-  Rotation := AModel.Rotation;
-  AnimationCount := AModel.AnimationsList.Count;
-  Animation := Nil;
-  if AnimationCount > 0 then
+  fAnimation := Nil;
+  fAnimations := Nil;
+  fIsValid := True;
+  fModel := AModel;
+  fName := TPath.GetFileName(AModel.Url);
+  if FileExists(AModel.Url) then
+    fHash := THashMD5.GetHashStringFromFile(AModel.Url)
+  else
+    fHash := '';
+
+  fTranslation := AModel.Translation;
+  fScale := AModel.Scale;
+  fRotation := AModel.Rotation;
+  fAnimationCount := AModel.AnimationsList.Count;
+  fAnimation := Nil;
+  if fAnimationCount > 0 then
     begin
-      Animations := TList<String>.Create;
-      for I := 0 to AnimationCount - 1 do
+      fAnimations := TList<String>.Create;
+      for I := 0 to fAnimationCount - 1 do
         begin
-          Animations.Add(AModel.AnimationsList[I]);
+          fAnimations.Add(AModel.AnimationsList[I]);
         end;
     end;
 
   if AModel.LocalBoundingBox.IsEmptyOrZero then
     begin
-      Size := Vector3(0,0,0);
-      Center := Vector3(0,0,0);
+      fSize := Vector3(0,0,0);
+      fCenter := Vector3(0,0,0);
     end
   else
     begin
-      Size := AModel.BoundingBox.Size;
-      Center := AModel.BoundingBox.Center;
+      fSize := AModel.BoundingBox.Size;
+      fCenter := AModel.BoundingBox.Center;
     end;
 end;
 
 destructor TModelInfo.Destroy;
 begin
+{$ifdef showfree}
+  WriteLnLog('Freeing TModelInfo');
+{$endif}
+{
   if fModel is TCastleModel then
     begin
       if Assigned(fModel) then
         FreeAndNil(fModel);
     end;
-
+}
   if Assigned(fAnimations) then
-    FreeAndNil(fAnimations);
+    begin
+{$ifdef showfree}
+      WriteLnLog('Freeing TModelInfo');
+{$endif}
+      FreeAndNil(fAnimations);
+    end;
   inherited;
 end;
 
@@ -683,7 +729,10 @@ end;
 
 destructor TAnimationInfo.Destroy;
 begin
-  fPosition.Free;
+{$ifdef showfree}
+  WriteLnLog('Freeing TAnimationInfo');
+{$endif}
+  FreeAndNil(fPosition);
   inherited;
 end;
 

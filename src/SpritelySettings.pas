@@ -28,9 +28,27 @@ type
   end;
   TProjectionArray = TArray<TProjection>;
 
+  TAnimationConfig = record
+    FramesPerSecond: Single;
+    ConstantSpeed: Boolean;
+    FramesPerSprite: Integer;
+    TimePerSpriteFrame: Single;
+  end;
+
+  TViewportConfig = record
+    DefaultView: Integer;
+  end;
+
+  TConfig = record
+    Animation: TAnimationConfig;
+    Viewport: TViewportConfig;
+  end;
+
   TPDXSettings = class
     AppHome: String;
     AppData: String;
+    ThumbData: String;
+    ThumbType: String;
     AppVersion: String;
     LoadFromDir: String;
     LastModel: String;
@@ -38,6 +56,7 @@ type
     SearchDir: String;
     Projections: TProjectionArray;
     UpdateRequired: Boolean;
+    Config: TConfig;
     procedure Load;
     procedure Save;
     {$ifdef badtex}
@@ -46,6 +65,10 @@ type
   private
     procedure CreateProjections;
     procedure SetDefaults;
+    procedure SetDefaultConfig;
+    procedure ExtractConfig(AConfig: TJSONObject);
+    procedure ExtractAnimationConfig(AValue: TJSONObject);
+    procedure ExtractViewportConfig(AValue: TJSONObject);
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -87,6 +110,8 @@ begin
 
   AppHome := IncludeTrailingPathDelimiter(AppHome);
   AppData := AppHome;
+  ThumbData := IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(AppHome)+'Thumbs');
+  ThumbType := '.png';
   AppVersion := APPVER;
   {$IF DEFINED(MSWINDOWS)}
   SearchDir := GetCurrentDir() + '\data';
@@ -111,6 +136,12 @@ begin
     begin
       ForceDirectories(AppHome);
     end;
+
+  if not DirectoryExists(ThumbData) then
+    begin
+      ForceDirectories(ThumbData);
+    end;
+
   if FileExists(IncludeTrailingPathDelimiter(AppHome) + 'Settings.json') then
     begin
       Load;
@@ -120,14 +151,52 @@ begin
   else
     begin
       SetDefaults;
+      SetDefaultConfig;
       Save;
     end;
 
 end;
 
+procedure TPDXSettings.SetDefaultConfig;
+begin
+  Config := Default(TConfig);
+  Config.Animation.FramesPerSecond := 30;
+  Config.Animation.ConstantSpeed := False;
+  Config.Animation.FramesPerSprite := 8;
+  Config.Animation.TimePerSpriteFrame := 0.125;
+  Config.Viewport.DefaultView := 3;
+end;
+
 procedure TPDXSettings.SetDefaults;
 begin
   CreateProjections;
+end;
+
+procedure TPDXSettings.ExtractAnimationConfig(AValue: TJSONObject);
+begin
+  AValue.TryGetValue('FramesPerSecond', Config.Animation.FramesPerSecond);
+  AValue.TryGetValue('ConstantSpeed', Config.Animation.ConstantSpeed);
+  AValue.TryGetValue('FramesPerSprite', Config.Animation.FramesPerSprite);
+  AValue.TryGetValue('TimePerSpriteFrame', Config.Animation.TimePerSpriteFrame);
+end;
+
+procedure TPDXSettings.ExtractViewportConfig(AValue: TJSONObject);
+begin
+  AValue.TryGetValue('DefaultView', Config.Viewport.DefaultView);
+end;
+
+procedure TPDXSettings.ExtractConfig(AConfig: TJSONObject);
+var
+  jobj: TJSONObject;
+begin
+  if AConfig.TryGetValue('Animation', jobj) then
+    begin
+      ExtractAnimationConfig(jobj);
+    end;
+  if AConfig.TryGetValue('Viewport', jobj) then
+    begin
+      ExtractViewportConfig(jobj);
+    end;
 end;
 
 procedure TPDXSettings.Load;
@@ -141,6 +210,7 @@ var
   AInclination: Single;
   AAzimuth: Single;
   AStretch: Single;
+  AConfig: TJSONObject;
 begin
   try
     JsonText := TFile.ReadAllText(IncludeTrailingPathDelimiter(AppHome) + 'Settings.json');
@@ -155,11 +225,19 @@ begin
     try
       jobj.TryGetValue('AppHome', AppHome);
       jobj.TryGetValue('AppData', AppData);
+      jobj.TryGetValue('ThumbData', ThumbData);
+      jobj.TryGetValue('ThumbType', ThumbType);
       jobj.TryGetValue('AppVersion', AppVersion);
       jobj.TryGetValue('LoadFromDir', LoadFromDir);
       jobj.TryGetValue('SaveToDir', SaveToDir);
       jobj.TryGetValue('SearchDir', SearchDir);
       jobj.TryGetValue('LastModel', LastModel);
+      if jobj.TryGetValue('Config', AConfig) then
+        begin
+          ExtractConfig(AConfig);
+        end
+      else
+        SetDefaultConfig;
       if(jobj.TryGetValue('Projections', jarr)) then
         begin
           if jarr.Count > 0 then
@@ -182,6 +260,11 @@ begin
                 end;
             end;
           end;
+
+      if ThumbData = String.Empty then
+        ThumbData := IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(AppHome)+'Thumbs');
+      if ThumbType = String.Empty then
+        ThumbType := '.png';
 
       if not Assigned(Projections) then
         begin

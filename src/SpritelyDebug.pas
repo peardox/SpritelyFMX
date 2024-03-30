@@ -126,7 +126,7 @@ end;
 procedure TDebugTransformHexahedron.InitializeNodes;
 begin
   inherited;
-  FOriginAxis := TDebugVariableAxis.Create(Self, YellowRGB);
+  FOriginAxis := TDebugVariableAxis.Create(Self, GreenRGB);
   ParentSpace.AddChildren(FOriginAxis.Root);
 end;
 

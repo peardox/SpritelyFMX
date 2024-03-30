@@ -65,8 +65,13 @@ __recovery/
 # Directory Specific
 
 test.png
+test.x3d
 Styles/Sterling.Win.style
 *.stat
+data/3d-model.png
+data/animation.png
+data/film.png
+data/license-36809694-2818102.pdf
 modules/
 Win32/
 Win64/

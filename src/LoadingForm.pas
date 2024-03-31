@@ -27,7 +27,7 @@ type
   public
     { Public declarations }
     procedure Setup(const NumFiles: Integer);
-    procedure AddingFile(const AFile: String);
+    procedure AddMessage(const AMessage: String; const MessageType: Integer = 0);
     property OnFile: TPDXMessageEvent read fOnFile write SetDoOnFile;
   end;
 
@@ -40,13 +40,15 @@ begin
   ModalResult := mrOK;
 end;
 
-procedure TfrmLoadingDialog.AddingFile(const AFile: String);
+procedure TfrmLoadingDialog.AddMessage(const AMessage: String; const MessageType: Integer = 0);
 begin
-  Memo1.Lines.Add(AFile);
+  Memo1.Lines.Add(AMessage);
   Memo1.GoToTextEnd;
-  Application.ProcessMessages;
-  ProgressBar1.Value := ProgressBar1.Value + 1;
-  Label1.Text := Format('(%3.0f of %3.0f)',[ProgressBar1.Value, ProgressBar1.Max]);
+  if MessageType = 0 then
+    begin
+      ProgressBar1.Value := ProgressBar1.Value + 1;
+      Label1.Text := Format('(%3.0f of %3.0f)',[ProgressBar1.Value, ProgressBar1.Max]);
+    end;
   Application.ProcessMessages;
 end;
 

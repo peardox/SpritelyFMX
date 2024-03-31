@@ -182,11 +182,15 @@ begin
   fInclination := -0.615088999271393;
   if Assigned(AModel) then
     CloneModel(AModel, AniIndex, AniTime);
-WriteLnLog('AniIndex = ' + IntToStr(AniIndex));
+  {
+  WriteLnLog('AniIndex = ' + IntToStr(AniIndex));
+
   if AniIndex = 16 then
     Grab(ACastleApp.Container, Default(TSizeAndPan), True)
   else
     Grab(ACastleApp.Container, Default(TSizeAndPan), True);
+  }
+    Grab(ACastleApp.Container, Default(TSizeAndPan));
 end;
 
 function TFrameExport.Grab(AContainer: TCastleContainer; APresetSize: TSizeAndPan; const ShowInfo: Boolean = False): TSizeAndPan;

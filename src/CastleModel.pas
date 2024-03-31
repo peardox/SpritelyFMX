@@ -612,16 +612,17 @@ begin
             model.fChildOf := Self;
             model.AddDebugBox;
             model.SetDebugBoxColour(fDebugColor);
-            Result := model;
           end;
       except
         on E : Exception do
           begin
-            Raise Exception.Create('Error in AddModel : ' + E.ClassName + ' - ' + E.Message);
+            FreeAndNil(model);
+//            Raise Exception.Create('Error in TModelPack.AddModel : ' + E.ClassName + ' - ' + E.Message);
            end;
       end;
     end;
 
+    Result := model;
 end;
 
 constructor TModelPack.Create(AOwner: TComponent);
@@ -673,7 +674,6 @@ begin
   fScale := AModel.Scale;
   fRotation := AModel.Rotation;
   fAnimationCount := AModel.AnimationsList.Count;
-  fAnimation := Nil;
   if fAnimationCount > 0 then
     begin
       fAnimations := TList<String>.Create;

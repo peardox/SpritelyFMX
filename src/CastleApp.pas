@@ -147,18 +147,31 @@ begin
   inherited;
   LoadViewport;
   fFrame := 0;
+  { Try loading last model }
   if(SystemSettings.LastModel <> EmptyStr) and (FileExists(SystemSettings.LastModel)) then
     begin
       model := fModels.AddModel(SystemSettings.LastModel);
-      fStage.Add(model);
-      fAxis.SetGround(model);
-      model.ShowDebugBox(True);
-      model.SelectModel;
-      model.SetInfo;
-      DoOnModel(model);
-      FitViewToModel(model);
-    end
-  else if UriFileExists(DEFAULT_MODEL) then
+      if model.BoundingBox.IsEmpty then
+        begin
+        { If bad model reset last model and free the dud}
+          SystemSettings.LastModel := '';
+          FreeAndNil(model);
+        end
+      else
+        begin
+        { otherwise let's load the last model }
+          fStage.Add(model);
+          fAxis.SetGround(model);
+          model.ShowDebugBox(True);
+          model.SelectModel;
+          model.SetInfo;
+          DoOnModel(model);
+          FitViewToModel(model);
+          Exit;
+        end;
+    end;
+  { Fallback to Default Model }
+  if UriFileExists(DEFAULT_MODEL) then
     begin
       model := fModels.AddModel(DEFAULT_MODEL);
       fStage.Add(model);

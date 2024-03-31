@@ -72,10 +72,12 @@ type
     Layout1: TLayout;
     Layout2: TLayout;
     Layout3: TLayout;
-    ListView1: TListView;
     mnuViewport: TMenuItem;
     mnuAutofit: TMenuItem;
     mnuView3D: TMenuItem;
+    mnuZoomAndPan: TMenuItem;
+    mnuResetZoomAndPan: TMenuItem;
+    mnuUseModelCenter: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure LayoutLeftResize(Sender: TObject);
     procedure SwitchView;
@@ -93,8 +95,6 @@ type
     procedure mnuClearClick(Sender: TObject);
     procedure cbxProjectionsChange(Sender: TObject);
     procedure mnuGLTFDirClick(Sender: TObject);
-    procedure ListView1ItemClick(const Sender: TObject;
-      const AItem: TListViewItem);
     procedure FormDestroy(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
     procedure mnuSaveImageClick(Sender: TObject);
@@ -104,6 +104,10 @@ type
       var KeyChar: Char; Shift: TShiftState);
     procedure mnuAutofitClick(Sender: TObject);
     procedure MenuItem1Click(Sender: TObject);
+    procedure mnuZoomAndPanClick(Sender: TObject);
+    procedure mnuUseModelCenterClick(Sender: TObject);
+    procedure mnuResetZoomAndPanClick(Sender: TObject);
+    procedure mnuOBJDirClick(Sender: TObject);
   private
     { Private declarations }
     cameraAngle: TPDXRadialDial;
@@ -112,7 +116,7 @@ type
     CastleApp: TCastleApp;
     OutputSize: TUnitConfig;
     ManualLoadNode: TTreeViewItem;
-    TheFileList: TObjectList<TFileDirectory>;
+//    TheFileList: TObjectList<TFileDirectory>;
     procedure NewModel(Sender: TObject; const AModel: TCastleModel);
     procedure LogTicker(Sender: TObject; const Msg: String);
     procedure RotateModel(Sender: TObject; const ARotation: Single);
@@ -126,10 +130,11 @@ type
     procedure PopulateProjections;
     procedure TreeViewItemClick(Sender: TObject);
     function AddModelNode(const ParentItem: TTreeViewItem;
-      const mi: TModelInfo): TTreeViewItem;
+      const mi: TModelInfo; const AForm: TForm = Nil): TTreeViewItem;
     procedure ManualLoad(const AFilename: String);
     function CreateThumbNail(const mi: TModelInfo; const AniIndex: Integer; const AniTime: Single = 0): Boolean;
     procedure MemStat(const OnlyNow: Boolean = False);
+    function ScanModelDirClick(SelDir: String; AList: TObjectList<TFileDirectory>): Integer;
   public
     { Public declarations }
   end;
@@ -296,6 +301,7 @@ begin
   cameraInclination.Max := Pi;
 //  cameraInclination.Angle := Pi / 2;
   mnuView3D.IsChecked := False;
+  mnuZoomAndPan.IsChecked := False;
 //  camAngle.Position.X := 0;
 //  camAngle.Position.Y := 100;
   StringGrid1.RowCount := 14;
@@ -344,7 +350,7 @@ begin
 
   Timer1.Enabled := True;
   Timer1.Interval := 100;
-  TheFileList := TObjectList<TFileDirectory>.Create;
+//  TheFileList := TObjectList<TFileDirectory>.Create;
 
   LayoutViewResize(Self);
 end;
@@ -354,8 +360,8 @@ begin
 {$ifdef showfree}
   WriteLnLog('Freeing TForm1 (and TheFileList)');
 {$endif}
-  if Assigned(TheFileList) then
-    TheFileList.Free;
+//  if Assigned(TheFileList) then
+//    TheFileList.Free;
 end;
 
 procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word;
@@ -386,19 +392,22 @@ if TabControl2.ActiveTab = TabModel then
     end;
   end else if TabControl2.ActiveTab = TabCamera then
   begin
-    case Key of
-      37: begin // Left
-            CameraMove( +0.01,  0);
-          end;
-      38: begin // Up
-            CameraMove(  0, -0.01);
-          end;
-      39: begin // Right
-            CameraMove( -0.01,  0);
-          end;
-      40: begin //Down
-            CameraMove(  0, +0.01);
-          end;
+    if mnuZoomAndPan.IsChecked then
+      begin
+        case Key of
+          37: begin // Left
+                CameraMove( +0.01,  0);
+              end;
+          38: begin // Up
+                CameraMove(  0, -0.01);
+              end;
+          39: begin // Right
+                CameraMove( -0.01,  0);
+              end;
+          40: begin //Down
+                CameraMove(  0, +0.01);
+              end;
+      end;
     end;
   end;
 
@@ -505,13 +514,16 @@ procedure TForm1.LayoutViewMouseWheel(Sender: TObject; Shift: TShiftState;
 var
   factor: Integer;
 begin
-  factor := 1;
-  if WheelDelta > 0 then
-    CastleApp.ZoomOut(factor);
-  if WheelDelta < 0 then
-    CastleApp.ZoomIn(factor);
-  UpdateModelInfo;
-  UpdateCamInfo(Self);
+  if mnuZoomAndPan.IsChecked then
+    begin
+      factor := 1;
+      if WheelDelta > 0 then
+        CastleApp.ZoomOut(factor);
+      if WheelDelta < 0 then
+        CastleApp.ZoomIn(factor);
+      UpdateModelInfo;
+      UpdateCamInfo(Self);
+    end;
 end;
 
 procedure TForm1.LayoutViewResize(Sender: TObject);
@@ -531,27 +543,6 @@ begin
     end;
 end;
 
-procedure TForm1.ListView1ItemClick(const Sender: TObject;
-  const AItem: TListViewItem);
-var
-  fn: String;
-  f: TFileDirectory;
-begin
-  if (AItem.Tag >= 0) and (AItem.Tag < TheFileList.Count) then
-    begin
-      f := TheFileList.Items[AItem.Tag];
-      fn := f.GetFullFileName;
-      if FileExists(fn) then
-        begin
-          if ReportMemoryLeaksOnShutdown then
-            Caption := APPNAME + ': ' + fn + ' (ReportMemoryLeaksOnShutdown)'
-          else
-            Caption := APPNAME + ': ' + fn;
-          CastleApp.AddModel(fn);
-        end;
-    end;
-end;
-
 procedure TForm1.LogTicker(Sender: TObject; const Msg: String);
 begin
   Memo1.BeginUpdate;
@@ -560,7 +551,7 @@ begin
   Memo1.EndUpdate;
 end;
 
-function TForm1.AddModelNode(const ParentItem: TTreeViewItem; const mi: TModelInfo): TTreeViewItem;
+function TForm1.AddModelNode(const ParentItem: TTreeViewItem; const mi: TModelInfo; const AForm: TForm = Nil): TTreeViewItem;
 var
   TItem: TTreeViewItem;
   A: Integer;
@@ -571,7 +562,13 @@ begin
   TItem.TagObject := mi;
   TItem.Tag := -1;
   if mi.Hash <> String.Empty then
-    CreateThumbNail(mi, -1);
+    begin
+      if AForm <> Nil then
+        begin
+          if (SystemSettings.Config.Picker.ThumbConfig = TThumbnailOption.AlwaysThumbnail) and CreateThumbNail(mi, -1) then
+            TfrmLoadingDialog(AForm).AddMessage('  Creating Thumbnail for ' + mi.Name, 1);
+        end;
+    end;
   if mi.AnimationCount > 0 then
     begin
       TItem.ImageIndex := 1;
@@ -584,10 +581,16 @@ begin
           AItem.Text := mi.Animations[A];
           AItem.Parent := TItem;
           AItem.OnClick := TreeViewItemClick;
+          if AForm <> Nil then
+            TfrmLoadingDialog(AForm).AddMessage('  Adding Animation ' + mi.Model.AnimationsList[A] + ' for ' + mi.Name, 2);
 
           if (mi.Hash <> String.Empty) and Assigned(mi.model) then
             begin
-              CreateThumbNail(mi, A, -0.5);
+              if AForm <> Nil then
+                begin
+                  if (SystemSettings.Config.Picker.ThumbConfig = TThumbnailOption.AlwaysThumbnail) and CreateThumbNail(mi, A, -0.5) then
+                    TfrmLoadingDialog(AForm).AddMessage('    Creating Thumbnail for ' + mi.Model.AnimationsList[A], 1);
+                end;
             end;
 
         end;
@@ -612,21 +615,25 @@ var
   fn: String;
 begin
   Result := False;
-  if AniIndex < 1 then
+  if AniIndex < 0 then
     fn := SystemSettings.ThumbData + mi.Hash + SystemSettings.ThumbType
   else
     fn := SystemSettings.ThumbData + mi.Hash + '-' + LeftPad(AniIndex) + SystemSettings.ThumbType;
-  if FileExists(fn) then
-    Result := True
-  else if Assigned(CastleApp) then
+  if not FileExists(fn) then
     begin
-      frame := TFrameExport.Create(Self, 256, 256);
-      frame.ThumbFromCastleApp(CastleApp, mi.Model, AniIndex, AniTime);
-      frame.Save(fn);
-      frame.Clear;
-      MemStat(True);
-      FreeAndNil(frame);
-      Result := True;
+      if Assigned(CastleApp) then
+        begin
+          frame := TFrameExport.Create(Self, 256, 256);
+          frame.ThumbFromCastleApp(CastleApp, mi.Model, AniIndex, AniTime);
+          frame.Save(fn);
+{$ifdef showfree}
+          if not FileExists(fn) then
+            WriteLnLog('Thumb not created (CreateThumbNail) ' + fn);
+{$endif}
+          frame.Clear;
+          FreeAndNil(frame);
+          Result := True;
+        end;
     end;
 end;
 
@@ -645,8 +652,16 @@ begin
       ManualLoadNode.Expand;
     end;
   model := CastleApp.PreloadModel(AFileName);
-  mi := model.SetInfo;
-  AddModelNode(ManualLoadNode, mi);
+  if Assigned(model) and not model.BoundingBox.IsEmpty then
+     begin
+      mi := model.SetInfo;
+      AddModelNode(ManualLoadNode, mi);
+     end
+  else
+    begin
+      WriteLnLog('Load Failure for ' + AFileName);
+      FreeAndNil(model);
+    end;
   TreeView1.EndUpdate;
 end;
 
@@ -657,8 +672,26 @@ end;
 
 procedure TForm1.mnuGLTFDirClick(Sender: TObject);
 var
-  LoadingForm: TfrmLoadingDialog;
+  Added: Integer;
+  AList: TObjectList<TFileDirectory>;
   SelDir: String;
+begin
+  if SelectDirectory('Scan for GLTF models (recursively)', SystemSettings.SearchDir, SelDir) then
+    begin
+      AList := ScanGLTFModels(SelDir);
+      try
+        Added := ScanModelDirClick(SelDir, AList);
+        if Added < AList.Count then
+          WriteLnLog('Added ' + IntToStr(Added) + ' expecting ' + IntToStr(AList.Count));
+      finally
+        AList.Free;
+      end;
+  end;
+end;
+
+function TForm1.ScanModelDirClick(SelDir: String; AList: TObjectList<TFileDirectory>): Integer;
+var
+  LoadingForm: TfrmLoadingDialog;
   I: Integer;
   GItem: TTreeViewItem;
   Added: Integer;
@@ -666,57 +699,75 @@ var
   mi: TModelInfo;
   Start: TDateTime;
   Elapsed: int64;
-  AList: TObjectList<TFileDirectory>;
+
+  procedure ShowProgress(const SelDir: String);
+  var
+    MemStr: String;
+    memUsed: UInt64;
+  begin
+    memUsed := GetMemoryUsed;
+    if memUsed < (1024 * 1024 * 1024) then
+      MemStr := Format('Memory Used : %8.3fM',[memUsed / (1024 * 1024)])
+    else
+      MemStr := Format('Memory Used : %8.3fG',[memUsed / (1024 * 1024 * 1024)]);
+    if ReportMemoryLeaksOnShutdown then
+      Caption := APPNAME + ': Scanning ' + SelDir + ' (ReportMemoryLeaksOnShutdown) - ' + MemStr + ' Used'
+    else
+      Caption := APPNAME + ': Scanning ' + SelDir + ' - ' + MemStr + ' Used';
+  end;
+
 begin
   Added := 0;
-  if SelectDirectory('Check GLTF models (recursively)', SystemSettings.SearchDir, SelDir) then
+  Start := Now;
+  if AList.Count > 0 then
     begin
-      if ReportMemoryLeaksOnShutdown then
-        Caption := APPNAME + ': Scanning ' + SelDir + ' (ReportMemoryLeaksOnShutdown)'
-      else
-        Caption := APPNAME + ': Scanning ' + SelDir;
-      Start := Now;
-      AList := ScanGLTFModels(SelDir);
+      TreeView1.CollapseAll;
+      TreeView1.BeginUpdate;
+      LoadingForm := TfrmLoadingDialog.Create(Self);
+      LoadingForm.Setup(AList.Count);
       try
-        if AList.Count > 0 then
+        Application.ProcessMessages;
+        LoadingForm.Show;
+        GItem := TTreeViewItem.Create(Self);
+        GItem.Text := TPath.GetFileName(AList.Items[0].ParentDir);
+        for I := 0 to AList.Count - 1 do
           begin
-            TreeView1.CollapseAll;
-            TreeView1.BeginUpdate;
-            LoadingForm := TfrmLoadingDialog.Create(Self);
-            LoadingForm.Setup(AList.Count);
-            try
-              Application.ProcessMessages;
-              LoadingForm.Show;
-              GItem := TTreeViewItem.Create(Self);
-              GItem.Text := TPath.GetFileName(AList.Items[0].ParentDir);
-              for I := 0 to AList.Count - 1 do
-                begin
-                  model := CastleApp.PreloadModel(AList.Items[I].GetFullFileName);
-                  mi := model.SetInfo;
-                  LoadingForm.AddingFile(mi.Name);
-                  AddModelNode(GItem, mi);
-
-                  TheFileList.Add(AList.Items[I]);
-                  Inc(Added);
-                end;
-              GItem.Parent := TreeView1;
-              GItem.Expand;
-              TreeView1.EndUpdate;
-              if Added > 0 then
-                begin
-                  Elapsed := SecondsBetween(Start, Now);
-                  SystemSettings.SearchDir := SelDir;
-    //              SaveModelList('../../models-test.json', AList);
-                end;
-            finally
-              FreeAndNil(LoadingForm);
-            end;
+            ShowProgress(SelDir);
+//            WriteLnLog('Trying load for ' + AList.Items[I].GetFullFileName);
+            model := CastleApp.PreloadModel(AList.Items[I].GetFullFileName);
+            if Assigned(model) and not model.BoundingBox.IsEmpty then
+              begin
+                mi := model.SetInfo;
+                LoadingForm.AddMessage(mi.Name);
+                AddModelNode(GItem, mi, LoadingForm);
+//                TheFileList.Add(AList.Items[I]);
+                Inc(Added);
+              end
+            else
+              begin
+                WriteLnLog('Load Failure for ' + AList.Items[I].GetFullFileName);
+//                FreeAndNil(AList.Items[I]);
+                FreeAndNil(model);
+              end;
+          end;
+        GItem.Parent := TreeView1;
+        GItem.Expand;
+        TreeView1.EndUpdate;
+        if Added > 0 then
+          begin
+            Elapsed := SecondsBetween(Start, Now);
+            if ReportMemoryLeaksOnShutdown then
+              Caption := APPNAME + ': Scan took ' + IntToStr(Elapsed) + ' Seconds ' + SelDir + ' (ReportMemoryLeaksOnShutdown)'
+            else
+              Caption := APPNAME + ': Scan took ' + IntToStr(Elapsed) + ' Seconds ' + SelDir;
+            SystemSettings.SearchDir := SelDir;
+//              SaveModelList('../../models-test.json', AList);
           end;
       finally
-        AList.Free;
+        FreeAndNil(LoadingForm);
       end;
     end;
-  MemStat(True);
+  Result := Added;
 end;
 
 procedure TForm1.mnuSaveImageClick(Sender: TObject);
@@ -731,6 +782,16 @@ begin
  //     frame.Clear;
       FreeAndNil(frame);
     end;
+end;
+
+procedure TForm1.mnuUseModelCenterClick(Sender: TObject);
+begin
+  mnuUseModelCenter.IsChecked := not mnuUseModelCenter.IsChecked;
+end;
+
+procedure TForm1.mnuZoomAndPanClick(Sender: TObject);
+begin
+  mnuZoomAndPan.IsChecked := not mnuZoomAndPan.IsChecked;
 end;
 
 procedure TForm1.mnuLoadClick(Sender: TObject);
@@ -749,13 +810,38 @@ begin
     end;
 end;
 
-procedure TForm1.mnuAutofitClick(Sender: TObject);
+procedure TForm1.mnuOBJDirClick(Sender: TObject);
+var
+  Added: Integer;
+  AList: TObjectList<TFileDirectory>;
+  SelDir: String;
+begin
+  if SelectDirectory('Scan for OBJ models (recursively)', SystemSettings.SearchDir, SelDir) then
+    begin
+      AList := ScanOBJModels(SelDir);
+      try
+        Added := ScanModelDirClick(SelDir, AList);
+        if Added < AList.Count then
+          WriteLnLog('Added ' + IntToStr(Added) + ' expecting ' + IntToStr(AList.Count));
+      finally
+        AList.Free;
+      end;
+  end;
+end;
+
+procedure TForm1.mnuResetZoomAndPanClick(Sender: TObject);
 begin
   if Assigned(CastleApp) and CastleApp.IsReady then
     begin
       CastleApp.FitViewToModel(CastleApp.Stage);
+      CastleApp.Camera.Pan := Vector2(0, 0);
       UpdateModelInfo;
     end;
+end;
+
+procedure TForm1.mnuAutofitClick(Sender: TObject);
+begin
+  mnuAutofit.IsChecked := not mnuAutofit.IsChecked;
 end;
 
 procedure TForm1.mnuCheckGLTFClick(Sender: TObject);
@@ -844,8 +930,6 @@ begin
   if Assigned(CastleApp) and Assigned(CastleApp.Camera) then
   begin
     CastleApp.Camera.Pan := CastleApp.Camera.Pan + Vector2(OX,OY);
-    Caption := Format('%12.4f %12.4f',[CastleApp.Camera.Pan.X, CastleApp.Camera.Pan.Y]);
-
     UpdateCamInfo(Self);
   end;
 end;
@@ -929,6 +1013,7 @@ var
   Obj: TObject;
   mi: TModelInfo;
   fn: String;
+  NewThumb: Boolean;
 begin
   TItem := TreeView1.Selected;
   Obj := TItem.TagObject;
@@ -945,12 +1030,35 @@ begin
             begin
               ImageControl1.LoadFromFile(fn);
             end
+          else if (SystemSettings.Config.Picker.ThumbConfig <> TThumbnailOption.NeverThumbnail) then
+            begin
+              if TItem.Tag < 0 then
+                NewThumb := CreateThumbNail(mi, -1)
+              else
+                NewThumb := CreateThumbNail(mi, TItem.Tag, -0.5);
+              if NewThumb then
+                begin
+                  if FileExists(fn) then
+                    begin
+                      ImageControl1.LoadFromFile(fn);
+                    end
+                  else
+                    begin
+                      ImageControl1.LoadFromFile(IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(SystemSettings.AppHome) + 'img') + 'nofile.png');
+                    end;
+                end;
+            end
           else
             begin
-//              ImageControl1.LoadFromFile(fn);
+{$ifdef showfree}
+              WriteLnLog('Thumb not found (TreeView1Change) ' + fn);
+{$endif}
+              ImageControl1.LoadFromFile(IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(SystemSettings.AppHome) + 'img') + 'nofile.png');
             end;
         end;
-    end;
+    end
+  else
+    ImageControl1.LoadFromFile(IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(SystemSettings.AppHome) + 'img') + 'nofile.png');
 end;
 
 procedure TForm1.TreeView1KeyDown(Sender: TObject; var Key: Word;

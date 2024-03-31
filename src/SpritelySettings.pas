@@ -26,6 +26,10 @@ type
     property Inclination: Single read fInclination write fInclination;
   	property Stretch: Single read fStretch write fStretch;
   end;
+
+  TThumbnailOption = (NeverThumbnail, ThumbnailOnDemand, AlwaysThumbnail);
+  TPreloadOption = (NeverPreload, PreloadOnDemand, AlwaysPreload);
+
   TProjectionArray = TArray<TProjection>;
 
   TAnimationConfig = record
@@ -39,9 +43,15 @@ type
     DefaultView: Integer;
   end;
 
+  TPickerConfig = record
+    ThumbConfig: TThumbnailOption;
+    PreloadConfig: TPreloadOption;
+  end;
+
   TConfig = record
     Animation: TAnimationConfig;
     Viewport: TViewportConfig;
+    Picker: TPickerConfig;
   end;
 
   TPDXSettings = class
@@ -69,6 +79,7 @@ type
     procedure ExtractConfig(AConfig: TJSONObject);
     procedure ExtractAnimationConfig(AValue: TJSONObject);
     procedure ExtractViewportConfig(AValue: TJSONObject);
+    procedure ExtractPickerConfig(AValue: TJSONObject);
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -165,6 +176,8 @@ begin
   Config.Animation.FramesPerSprite := 8;
   Config.Animation.TimePerSpriteFrame := 0.125;
   Config.Viewport.DefaultView := 3;
+  Config.Picker.ThumbConfig := TThumbnailOption.ThumbnailOnDemand;
+  Config.Picker.PreloadConfig := TPreloadOption.PreloadOnDemand;
 end;
 
 procedure TPDXSettings.SetDefaults;
@@ -185,6 +198,12 @@ begin
   AValue.TryGetValue('DefaultView', Config.Viewport.DefaultView);
 end;
 
+procedure TPDXSettings.ExtractPickerConfig(AValue: TJSONObject);
+begin
+  AValue.TryGetValue('ThumbConfig', Config.Picker.ThumbConfig);
+  AValue.TryGetValue('PreloadConfig', Config.Picker.PreloadConfig);
+end;
+
 procedure TPDXSettings.ExtractConfig(AConfig: TJSONObject);
 var
   jobj: TJSONObject;
@@ -192,10 +211,32 @@ begin
   if AConfig.TryGetValue('Animation', jobj) then
     begin
       ExtractAnimationConfig(jobj);
+    end
+  else
+    begin
+      Config.Animation.FramesPerSecond := 30;
+      Config.Animation.ConstantSpeed := False;
+      Config.Animation.FramesPerSprite := 8;
+      Config.Animation.TimePerSpriteFrame := 0.125;
     end;
+
   if AConfig.TryGetValue('Viewport', jobj) then
     begin
       ExtractViewportConfig(jobj);
+    end
+  else
+    begin
+      Config.Viewport.DefaultView := 3;
+    end;
+
+  if AConfig.TryGetValue('Picker', jobj) then
+    begin
+      ExtractPickerConfig(jobj);
+    end
+  else
+    begin
+      Config.Picker.ThumbConfig := TThumbnailOption.ThumbnailOnDemand;
+      Config.Picker.PreloadConfig := TPreloadOption.PreloadOnDemand;
     end;
 end;
 

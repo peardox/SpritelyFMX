@@ -24,8 +24,8 @@ type
   TFileDirectoryList = TObjectList<TFileDirectory>;
 
 procedure CheckGLTFTextures(const ADir: String);
-function ScanGLTFModels(const ADir: String): TObjectList<TFileDirectory>;
-function ScanOBJModels(const ADir: String): TObjectList<TFileDirectory>;
+function ScanGLTFModels(const ADir: String; const OwnObjects: Boolean = True): TObjectList<TFileDirectory>;
+function ScanOBJModels(const ADir: String; const OwnObjects: Boolean = True): TObjectList<TFileDirectory>;
 procedure SaveModelList(const AFilename: String; const AList: TFileDirectoryList);
 
 implementation
@@ -153,13 +153,13 @@ begin
     end;
 end;
 
-function ScanGLTFModels(const ADir: String): TObjectList<TFileDirectory>;
+function ScanGLTFModels(const ADir: String; const OwnObjects: Boolean): TObjectList<TFileDirectory>;
 var
   TheList: TObjectList<TFileDirectory>;
   Group: Integer;
 begin
   Group := 0;
-  TheList := TObjectList<TFileDirectory>.Create(False);
+  TheList := TObjectList<TFileDirectory>.Create(OwnObjects);
   ScanModels(ADir, '', ['.gltf', '.glb'], TheList, Group);
   Result := TheList;
 end;
@@ -192,13 +192,13 @@ begin
   end;
 end;
 
-function ScanOBJModels(const ADir: String): TObjectList<TFileDirectory>;
+function ScanOBJModels(const ADir: String; const OwnObjects: Boolean): TObjectList<TFileDirectory>;
 var
   TheList: TObjectList<TFileDirectory>;
   Group: Integer;
 begin
   Group := 0;
-  TheList := TObjectList<TFileDirectory>.Create;
+  TheList := TObjectList<TFileDirectory>.Create(OwnObjects);
   ScanModels(ADir, '', ['.obj'], TheList, Group);
   Result := TheList;
 end;

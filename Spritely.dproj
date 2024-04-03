@@ -302,6 +302,11 @@
         <DCCReference Include="src\LoadingForm.pas">
             <Form>frmLoadingDialog</Form>
         </DCCReference>
+        <DCCReference Include="src\InfoForm.pas"/>
+        <DCCReference Include="src\ModelManager.pas"/>
+        <DCCReference Include="src\SettingsForm.pas">
+            <Form>frmSettingsDialog</Form>
+        </DCCReference>
         <None Include="Styles\MaterialOxfordBlue_Linux.style"/>
         <None Include="Styles\MaterialOxfordBlue_Win.style"/>
         <None Include="Styles\Win10Modern.Style"/>

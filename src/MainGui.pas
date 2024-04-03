@@ -18,6 +18,7 @@ uses
   SpritelyCheckTextures,
   SpritelySettings,
   FrameToImage,
+  ModelManager,
   SpritelyTypes, FMX.Objects, FMX.ListBox, FMX.ListView.Types,
   FMX.ListView.Appearances, FMX.ListView.Adapters.Base, FMX.ListView,
   FMX.TreeView, System.ImageList, FMX.ImgList
@@ -78,6 +79,10 @@ type
     mnuZoomAndPan: TMenuItem;
     mnuResetZoomAndPan: TMenuItem;
     mnuUseModelCenter: TMenuItem;
+    mnuDAEDir: TMenuItem;
+    mnuSTLDir: TMenuItem;
+    mnuOptions: TMenuItem;
+    mnuExit: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure LayoutLeftResize(Sender: TObject);
     procedure SwitchView;
@@ -108,8 +113,13 @@ type
     procedure mnuUseModelCenterClick(Sender: TObject);
     procedure mnuResetZoomAndPanClick(Sender: TObject);
     procedure mnuOBJDirClick(Sender: TObject);
+    procedure mnuSTLDirClick(Sender: TObject);
+    procedure mnuDAEDirClick(Sender: TObject);
+    procedure mnuOptionsClick(Sender: TObject);
+    procedure mnuExitClick(Sender: TObject);
   private
     { Private declarations }
+    mm: TModelManager;
     cameraAngle: TPDXRadialDial;
     cameraInclination: TPDXArcDial;
     CastleControl: TCastleControl;
@@ -135,6 +145,7 @@ type
     function CreateThumbNail(const mi: TModelInfo; const AniIndex: Integer; const AniTime: Single = 0): Boolean;
     procedure MemStat(const OnlyNow: Boolean = False);
     function ScanModelDirClick(SelDir: String; AList: TObjectList<TFileDirectory>): Integer;
+    procedure ResetZoomAndPan;
   public
     { Public declarations }
   end;
@@ -153,6 +164,8 @@ uses
   {$ENDIF}
   Math,
   LoadingForm,
+  InfoForm,
+  SettingsForm,
   System.DateUtils,
   System.IOUtils,
   CastleLog,
@@ -271,6 +284,7 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
+  mm := TModelManager.Create(Self);
   OutputSize := UnitConfig(256, 256);
   CastleControl := TCastleControl.Create(View3D);
   CastleControl.Align := TAlignLayout.Client;
@@ -301,7 +315,6 @@ begin
   cameraInclination.Max := Pi;
 //  cameraInclination.Angle := Pi / 2;
   mnuView3D.IsChecked := False;
-  mnuZoomAndPan.IsChecked := False;
 //  camAngle.Position.X := 0;
 //  camAngle.Position.Y := 100;
   StringGrid1.RowCount := 14;
@@ -342,6 +355,9 @@ begin
   StringGrid2.Cells[0,13] := 'Inclination';
   StringGrid2.Cells[0,14] := 'Tile Angle';
 
+  mnuAutofit.IsChecked := SystemSettings.Config.Viewport.AutoFit;
+  mnuZoomAndPan.IsChecked := SystemSettings.Config.Viewport.ZoomAndPan;
+  mnuUseModelCenter.IsChecked := SystemSettings.Config.Viewport.UseModelCenter;
 
   UpdateModelInfo;
   UpdateCamInfo(Self);
@@ -418,12 +434,11 @@ end;
 
 procedure TForm1.UpdateModelInfo;
 var
-  inf: TModelInfo;
   model: TCastleModel;
   V: TViewStats;
 begin
   model := CastleApp.SelectedModel;
-  if model <> Nil then
+  if Assigned(model) then
   begin
     StringGrid1.BeginUpdate;
     if CastleApp.IsReady then
@@ -440,21 +455,17 @@ begin
         }
       end;
 
-    inf := model.ModelInfo;
-    if Assigned(inf) then
-      begin
-        StringGrid1.Cells[1,3] := FormatFloat('###0.000', inf.Rotation.W);
-        StringGrid1.Cells[1,4] := FormatFloat('###0.000', inf.Scale.X);
+    StringGrid1.Cells[1,3] := FormatFloat('###0.000', model.Rotation.W);
+    StringGrid1.Cells[1,4] := FormatFloat('###0.000', model.Scale.X);
 
-        StringGrid1.Cells[1,5] := FormatFloat('###0.000', inf.Center.X * inf.Scale.X);
-        StringGrid1.Cells[1,6] := FormatFloat('###0.000', inf.Center.Y * inf.Scale.X);
-        StringGrid1.Cells[1,7] := FormatFloat('###0.000', inf.Center.Z * inf.Scale.X);
+    StringGrid1.Cells[1,5] := FormatFloat('###0.000', model.Center.X * model.Scale.X);
+    StringGrid1.Cells[1,6] := FormatFloat('###0.000', model.Center.Y * model.Scale.X);
+    StringGrid1.Cells[1,7] := FormatFloat('###0.000', model.Center.Z * model.Scale.X);
 
-        StringGrid1.Cells[1,8] := FormatFloat('###0.000', inf.Size.X * inf.Scale.X);
-        StringGrid1.Cells[1,9] := FormatFloat('###0.000', inf.Size.Y * inf.Scale.X);
-        StringGrid1.Cells[1,10] := FormatFloat('###0.000', inf.Size.Z * inf.Scale.X);
-        StringGrid1.Cells[1,11] := TPath.GetFileNameWithoutExtension(inf.Name);
-      end;
+    StringGrid1.Cells[1,8] := FormatFloat('###0.000', model.BoundingBox.Size.X * model.Scale.X);
+    StringGrid1.Cells[1,9] := FormatFloat('###0.000', model.BoundingBox.Size.Y * model.Scale.X);
+    StringGrid1.Cells[1,10] := FormatFloat('###0.000', model.BoundingBox.Size.Z * model.Scale.X);
+    StringGrid1.Cells[1,11] := TPath.GetFileNameWithoutExtension(model.Name);
 
     StringGrid1.Cells[1,12] := FormatFloat('###0.000', CastleApp.Zoom);
     StringGrid1.Cells[1,13] := FormatFloat('###0.00', RadToDeg(CastleApp.FieldOfView));
@@ -557,7 +568,9 @@ var
   A: Integer;
   AItem: TTreeViewItem;
   Shortname: String;
+  reqContinue: Boolean;
 begin
+  reqContinue := True;
   TItem := TTreeViewItem.Create(Self);
   TItem.TagObject := mi;
   TItem.Tag := -1;
@@ -566,7 +579,10 @@ begin
       if AForm <> Nil then
         begin
           if (SystemSettings.Config.Picker.ThumbConfig = TThumbnailOption.AlwaysThumbnail) and CreateThumbNail(mi, -1) then
-            TfrmLoadingDialog(AForm).AddMessage('  Creating Thumbnail for ' + mi.Name, 1);
+            begin
+              while reqContinue do
+                reqContinue := TfrmLoadingDialog(AForm).AddMessage('  Creating Thumbnail for ' + mi.Name, 1);
+            end;
         end;
     end;
   if mi.AnimationCount > 0 then
@@ -582,14 +598,15 @@ begin
           AItem.Parent := TItem;
           AItem.OnClick := TreeViewItemClick;
           if AForm <> Nil then
-            TfrmLoadingDialog(AForm).AddMessage('  Adding Animation ' + mi.Model.AnimationsList[A] + ' for ' + mi.Name, 2);
+            if reqContinue and (SystemSettings.Config.Picker.ThumbConfig = TThumbnailOption.AlwaysThumbnail) then
+              reqContinue := TfrmLoadingDialog(AForm).AddMessage('  Adding Animation ' + mi.Model.AnimationsList[A] + ' for ' + mi.Name, 2);
 
           if (mi.Hash <> String.Empty) and Assigned(mi.model) then
             begin
               if AForm <> Nil then
                 begin
-                  if (SystemSettings.Config.Picker.ThumbConfig = TThumbnailOption.AlwaysThumbnail) and CreateThumbNail(mi, A, -0.5) then
-                    TfrmLoadingDialog(AForm).AddMessage('    Creating Thumbnail for ' + mi.Model.AnimationsList[A], 1);
+                  if reqContinue and (SystemSettings.Config.Picker.ThumbConfig = TThumbnailOption.AlwaysThumbnail) and CreateThumbNail(mi, A, -0.5) then
+                    reqContinue := TfrmLoadingDialog(AForm).AddMessage('    Creating Thumbnail for ' + mi.Model.AnimationsList[A], 1);
                 end;
             end;
 
@@ -606,7 +623,10 @@ begin
   TItem.Parent := ParentItem;
   TItem.OnClick := TreeViewItemClick;
 
-  Result := TItem;
+  if reqContinue then
+    Result := TItem
+  else
+    Result := Nil;
 end;
 
 function TForm1.CreateThumbNail(const mi: TModelInfo; const AniIndex: Integer; const AniTime: Single = 0): Boolean;
@@ -655,7 +675,9 @@ begin
   if Assigned(model) and not model.BoundingBox.IsEmpty then
      begin
       mi := model.SetInfo;
+      mm.AddHash(mi.Hash);
       AddModelNode(ManualLoadNode, mi);
+//      FreeAndNil(mi.model);     // Preload never
      end
   else
     begin
@@ -670,25 +692,6 @@ begin
   SwitchView;
 end;
 
-procedure TForm1.mnuGLTFDirClick(Sender: TObject);
-var
-  Added: Integer;
-  AList: TObjectList<TFileDirectory>;
-  SelDir: String;
-begin
-  if SelectDirectory('Scan for GLTF models (recursively)', SystemSettings.SearchDir, SelDir) then
-    begin
-      AList := ScanGLTFModels(SelDir);
-      try
-        Added := ScanModelDirClick(SelDir, AList);
-        if Added < AList.Count then
-          WriteLnLog('Added ' + IntToStr(Added) + ' expecting ' + IntToStr(AList.Count));
-      finally
-        AList.Free;
-      end;
-  end;
-end;
-
 function TForm1.ScanModelDirClick(SelDir: String; AList: TObjectList<TFileDirectory>): Integer;
 var
   LoadingForm: TfrmLoadingDialog;
@@ -699,6 +702,8 @@ var
   mi: TModelInfo;
   Start: TDateTime;
   Elapsed: int64;
+  reqContinue: Boolean;
+  iForm: TfrmInfoDialog;
 
   procedure ShowProgress(const SelDir: String);
   var
@@ -717,6 +722,7 @@ var
   end;
 
 begin
+  reqContinue := True;
   Added := 0;
   Start := Now;
   if AList.Count > 0 then
@@ -732,22 +738,35 @@ begin
         GItem.Text := TPath.GetFileName(AList.Items[0].ParentDir);
         for I := 0 to AList.Count - 1 do
           begin
-            ShowProgress(SelDir);
-//            WriteLnLog('Trying load for ' + AList.Items[I].GetFullFileName);
-            model := CastleApp.PreloadModel(AList.Items[I].GetFullFileName);
-            if Assigned(model) and not model.BoundingBox.IsEmpty then
+            if reqContinue then
               begin
-                mi := model.SetInfo;
-                LoadingForm.AddMessage(mi.Name);
-                AddModelNode(GItem, mi, LoadingForm);
-//                TheFileList.Add(AList.Items[I]);
-                Inc(Added);
-              end
-            else
-              begin
-                WriteLnLog('Load Failure for ' + AList.Items[I].GetFullFileName);
-//                FreeAndNil(AList.Items[I]);
-                FreeAndNil(model);
+                ShowProgress(SelDir);
+    //            WriteLnLog('Trying load for ' + AList.Items[I].GetFullFileName);
+                model := CastleApp.PreloadModel(AList.Items[I].GetFullFileName);
+                if Assigned(model) and not model.BoundingBox.IsEmpty then
+                  begin
+                    mi := model.SetInfo;
+                    mm.AddHash(mi.Hash);
+              //      WriteLnLog(mi.Name + ' = ' + IntToStr(SizeOf(mi.model)));
+                    if mi.AnimationCount > 0 then
+                      reqContinue := LoadingForm.AddMessage('Loading ' + mi.Name + ' (Animated)')
+                    else
+                      reqContinue := LoadingForm.AddMessage('Loading ' + mi.Name);
+                    if reqContinue and (AddModelNode(GItem, mi, LoadingForm) = Nil) then
+                      begin
+                        reqContinue := False;
+                        Inc(Added);
+                        Break;
+                      end;
+    //                TheFileList.Add(AList.Items[I]);
+                    Inc(Added);
+                  end
+                else
+                  begin
+                    WriteLnLog('Load Failure for ' + AList.Items[I].GetFullFileName);
+    //                FreeAndNil(AList.Items[I]);
+                    FreeAndNil(model);
+                end;
               end;
           end;
         GItem.Parent := TreeView1;
@@ -761,10 +780,20 @@ begin
             else
               Caption := APPNAME + ': Scan took ' + IntToStr(Elapsed) + ' Seconds ' + SelDir;
             SystemSettings.SearchDir := SelDir;
-//              SaveModelList('../../models-test.json', AList);
+//              SaveModelList('../../test.spritely', AList);
           end;
       finally
         FreeAndNil(LoadingForm);
+      end;
+    end;
+  if Added = 0 then
+    begin
+      iForm := TfrmInfoDialog.Create(Self);
+      try
+        iForm.Setup('No files found.');
+        iForm.ShowModal();
+      finally
+        FreeAndNil(iForm);
       end;
     end;
   Result := Added;
@@ -787,17 +816,19 @@ end;
 procedure TForm1.mnuUseModelCenterClick(Sender: TObject);
 begin
   mnuUseModelCenter.IsChecked := not mnuUseModelCenter.IsChecked;
+  SystemSettings.Config.Viewport.UseModelCenter := mnuUseModelCenter.IsChecked;
 end;
 
 procedure TForm1.mnuZoomAndPanClick(Sender: TObject);
 begin
   mnuZoomAndPan.IsChecked := not mnuZoomAndPan.IsChecked;
+  SystemSettings.Config.Viewport.ZoomAndPan := mnuZoomAndPan.IsChecked;
 end;
 
 procedure TForm1.mnuLoadClick(Sender: TObject);
 begin
   OpenDialog1.InitialDir := SystemSettings.LoadFromDir;
-  OpenDialog1.Filter:='GLTF Models|*.gltf;*.glb|OBJ Models|*.obj|DAE Models|*.dae|STL Models|*.stl|X3D Models|*.x3d;*.x3dz;*.x3d.gz;*.x3dv;*.x3dvz;*.x3dv.gz';
+  OpenDialog1.Filter:='GLTF Models|*.gltf;*.glb|OBJ Models|*.obj|DAE Models|*.dae|X3D Models|*.x3d;*.x3dz;*.x3d.gz;*.x3dv;*.x3dvz;*.x3dv.gz|STL Models|*.stl';
   if OpenDialog1.Execute then
     begin
       if ReportMemoryLeaksOnShutdown then
@@ -808,6 +839,49 @@ begin
 //      CastleApp.AddModel(OpenDialog1.FileName);
       SystemSettings.LastModel := OpenDialog1.FileName;
     end;
+end;
+
+procedure TForm1.mnuDAEDirClick(Sender: TObject);
+var
+  Added: Integer;
+  AList: TObjectList<TFileDirectory>;
+  SelDir: String;
+begin
+  if SelectDirectory('Scan for DAE models (recursively)', SystemSettings.SearchDir, SelDir) then
+    begin
+      AList := ScanDAEModels(SelDir);
+      try
+        Added := ScanModelDirClick(SelDir, AList);
+        if Added < AList.Count then
+          WriteLnLog('Added ' + IntToStr(Added) + ' expecting ' + IntToStr(AList.Count));
+      finally
+        AList.Free;
+      end;
+  end;
+end;
+
+procedure TForm1.mnuExitClick(Sender: TObject);
+begin
+  Application.Terminate;
+end;
+
+procedure TForm1.mnuGLTFDirClick(Sender: TObject);
+var
+  Added: Integer;
+  AList: TObjectList<TFileDirectory>;
+  SelDir: String;
+begin
+  if SelectDirectory('Scan for GLTF models (recursively)', SystemSettings.SearchDir, SelDir) then
+    begin
+      AList := ScanGLTFModels(SelDir);
+      try
+        Added := ScanModelDirClick(SelDir, AList);
+        if Added < AList.Count then
+          WriteLnLog('Added ' + IntToStr(Added) + ' expecting ' + IntToStr(AList.Count));
+      finally
+        AList.Free;
+      end;
+  end;
 end;
 
 procedure TForm1.mnuOBJDirClick(Sender: TObject);
@@ -829,7 +903,50 @@ begin
   end;
 end;
 
+procedure TForm1.mnuOptionsClick(Sender: TObject);
+var
+  mr: TModalResult;
+  sForm: TfrmSettingsDialog;
+begin
+  sForm := TfrmSettingsDialog.Create(Self);
+  try
+    sForm.Setup;
+    mr := sForm.ShowModal();
+
+    if mr = mrOK then
+      begin
+        SystemSettings.Save;
+      end;
+  finally
+    FreeAndNil(sForm);
+  end;
+end;
+
+procedure TForm1.mnuSTLDirClick(Sender: TObject);
+var
+  Added: Integer;
+  AList: TObjectList<TFileDirectory>;
+  SelDir: String;
+begin
+  if SelectDirectory('Scan for STL models (recursively)', SystemSettings.SearchDir, SelDir) then
+    begin
+      AList := ScanSTLModels(SelDir);
+      try
+        Added := ScanModelDirClick(SelDir, AList);
+        if Added < AList.Count then
+          WriteLnLog('Added ' + IntToStr(Added) + ' expecting ' + IntToStr(AList.Count));
+      finally
+        AList.Free;
+      end;
+  end;
+end;
+
 procedure TForm1.mnuResetZoomAndPanClick(Sender: TObject);
+begin
+  ResetZoomAndPan;
+end;
+
+procedure TForm1.ResetZoomAndPan;
 begin
   if Assigned(CastleApp) and CastleApp.IsReady then
     begin
@@ -842,6 +959,7 @@ end;
 procedure TForm1.mnuAutofitClick(Sender: TObject);
 begin
   mnuAutofit.IsChecked := not mnuAutofit.IsChecked;
+  SystemSettings.Config.Viewport.Autofit := mnuAutofit.IsChecked;
 end;
 
 procedure TForm1.mnuCheckGLTFClick(Sender: TObject);
@@ -1115,8 +1233,18 @@ begin
       if Obj is TModelInfo then
         begin
           mi := Obj as TModelInfo;
-          if Assigned(mi) and Assigned(mi.model) then
+          if Assigned(mi) then
             begin
+              {
+              if not Assigned(mi.model) then
+                begin
+                  mi.Model := CastleApp.AddModel(mi.ModelFile);
+                  if not Assigned(mi.model) or mi.model.BoundingBox.IsEmpty then
+                     begin
+                      Exit;
+                     end
+                end;
+              }
               if ReportMemoryLeaksOnShutdown then
                 Caption := APPNAME + ': ' + mi.Name + ' (ReportMemoryLeaksOnShutdown)'
               else
@@ -1131,6 +1259,7 @@ begin
                       model.ForceAnimationPose(AniName, AniTime, True);
                     end;
                 end;
+            //  ResetZoomAndPan;
             end;
         end;
     end;

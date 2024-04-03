@@ -6,7 +6,7 @@ uses System.SysUtils, System.Classes, System.Types, CastleScene, CastleVectors,
   X3DNodes, CastleColors;
 type
 
-  TAxisGrid = class(TCastleScene)
+  TAxis = class(TCastleScene)
   strict private
     FShape: TShapeNode;
     FGeometry: TLineSetNode;
@@ -16,7 +16,23 @@ type
     FAppearance: TAppearanceNode;
   public
     constructor Create(AOwner: TComponent); overload; override;
-    constructor Create(const AOwner: TComponent; const Color: TCastleColorRGB; const AGridSize: Integer = 1; const AGridStep: Integer = 1; const AGridScale: Single = 1); reintroduce; overload;
+    constructor Create(const AOwner: TComponent; const Color: TCastleColorRGB; const AGridSize: Integer = 1; const AGridScale: Single = 1); reintroduce; overload;
+    destructor Destroy; override;
+    procedure SetGround(const AValue: Single); overload;
+    procedure SetGround(const AModel: TCastleScene); overload;
+  end;
+
+  TGrid = class(TCastleScene)
+  strict private
+    FShape: TShapeNode;
+    FGeometry: TLineSetNode;
+    FCoord: TCoordinateNode;
+    FTransform: TTransformNode;
+    FMaterial: TUnlitMaterialNode;
+    FAppearance: TAppearanceNode;
+  public
+    constructor Create(AOwner: TComponent); overload; override;
+    constructor Create(const AOwner: TComponent; const Color: TCastleColorRGB; const AGridSize: Integer = 1; const AGridScale: Single = 1; const AGridStep: Single = 1); reintroduce; overload;
     destructor Destroy; override;
     procedure SetGround(const AValue: Single); overload;
     procedure SetGround(const AModel: TCastleScene); overload;
@@ -40,19 +56,19 @@ implementation
 
 uses Math, CastleLog;
 
-constructor TAxisGrid.Create(AOwner: TComponent);
+constructor TAxis.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   Pickable := False;
 end;
 
-destructor TAxisGrid.Destroy;
+destructor TAxis.Destroy;
 begin
   WriteLnLog('Freeing TAxisGrid');
   inherited;
 end;
 
-procedure TAxisGrid.SetGround(const AModel: TCastleScene);
+procedure TAxis.SetGround(const AModel: TCastleScene);
 begin
   if assigned(AModel) and not(AModel.RootNode = nil) then
     begin
@@ -63,17 +79,17 @@ begin
     end;
 end;
 
-procedure TAxisGrid.SetGround(const AValue: Single);
+procedure TAxis.SetGround(const AValue: Single);
 begin
   Translation := Vector3(0, AValue, 0);
 end;
 
-constructor TAxisGrid.Create(const AOwner: TComponent; const Color: TCastleColorRGB; const AGridSize: Integer = 1; const AGridStep: Integer = 1; const AGridScale: Single = 1);
+constructor TAxis.Create(const AOwner: TComponent; const Color: TCastleColorRGB; const AGridSize: Integer = 1; const AGridScale: Single = 1);
 var
   X3DTree: TX3DRootNode;
+  Points: Array of TVector3;
 begin
   Create(AOwner);
-
   try
     FCoord := TCoordinateNode.Create;
     FCoord.SetPoint([
@@ -99,6 +115,89 @@ begin
 
     FTransform := TTransformNode.Create;
     FTransform.AddChildren(FShape);
+
+    FTransform.Scale := Vector3(AGridScale, AGridScale, AGridScale);
+
+    X3DTree := TX3DRootNode.Create;
+    X3DTree.AddChildren(FTransform);
+    Load(X3DTree, True);
+  except
+    on E : Exception do
+      begin
+        raise Exception.Create('Error in TAxisGrid.Create : ' + E.ClassName + ' - ' + E.Message);
+       end;
+  end;
+end;
+
+{ TGrid }
+
+constructor TGrid.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  Pickable := False;
+end;
+
+destructor TGrid.Destroy;
+begin
+  WriteLnLog('Freeing TAxisGrid');
+  inherited;
+end;
+
+procedure TGrid.SetGround(const AModel: TCastleScene);
+begin
+  if assigned(AModel) and not(AModel.RootNode = nil) then
+    begin
+    if not AModel.BoundingBox.IsEmptyOrZero then
+      begin
+        Translation := Vector3(0, Min(AModel.BoundingBox.Data[0].Y, AModel.BoundingBox.Data[1].Y), 0);
+      end;
+    end;
+end;
+
+procedure TGrid.SetGround(const AValue: Single);
+begin
+  Translation := Vector3(0, AValue, 0);
+end;
+
+constructor TGrid.Create(const AOwner: TComponent; const Color: TCastleColorRGB; const AGridSize: Integer = 1; const AGridScale: Single = 1; const AGridStep: Single = 1);
+var
+  X3DTree: TX3DRootNode;
+  Points: Array of TVector3;
+  I: Integer;
+begin
+  Create(AOwner);
+  try
+    SetLength(Points, (4 * ((2 * AGridSize) + 1)));
+    for I := 0 to (2 * AGridSize) do
+      begin
+        Points[(I*2)] := Vector3(-AGridSize * AGridStep,  0,  (AGridSize - I) * AGridStep);
+        Points[(I*2) + 1] := Vector3(AGridSize * AGridStep, 0, (AGridSize - I) * AGridStep);
+        Points[((4 * AGridSize) + 2) + (I*2)] := Vector3((AGridSize - I) * AGridStep, 0, -AGridSize * AGridStep);
+        Points[((4 * AGridSize) + 2) + (I*2) + 1] := Vector3((AGridSize - I) * AGridStep, 0, AGridSize * AGridStep);
+      end;
+
+    FCoord := TCoordinateNode.Create;
+    FCoord.SetPoint(Points);
+
+    FGeometry := TLineSetNode.Create;
+    FGeometry.Mode := lmPair;
+    FGeometry.Coord := FCoord;
+
+    FMaterial := TUnlitMaterialNode.Create;
+    FMaterial.EmissiveColor := Color;
+
+    FAppearance := TAppearanceNode.Create;
+    FAppearance.ShadowCaster := false;
+    FAppearance.Material := FMaterial;
+
+    FShape := TShapeNode.Create;
+    FShape.Geometry := FGeometry;
+    FShape.Appearance := FAppearance;
+
+    FTransform := TTransformNode.Create;
+    FTransform.AddChildren(FShape);
+
+    FTransform.Scale := Vector3(AGridScale, AGridScale, AGridScale);
 
     X3DTree := TX3DRootNode.Create;
     X3DTree.AddChildren(FTransform);

@@ -98,7 +98,9 @@ begin
     // + fLookAt;
 
   if not(InclinationValue > (-Pi/2)) then
-    WriteLnLog('Inc bad');
+    begin
+      WriteLnLog(Format('Inc bad : %12.8f',[InclinationValue]));
+    end;
   Rotation := Vector4(0,1,0,AzimuthValue);
   fInclinationTransform.Rotation := Vector4(1,0,0,InclinationValue);
   fCamera.Direction := -fCamera.Translation.Normalize;

@@ -26,7 +26,6 @@ type
   end;
 
 function CreateDirectionalLight(const AOwner: TComponent; const LightPos: TVector3): TCastleDirectionalLight; overload;
-function SummariseModel(AOwner: TComponent; const AFilename: String): TModelInfo;
 function LeftPad(const AValue: Integer; const Length: Integer=3; const Pad: Char = '0'): String;
 
 implementation
@@ -36,27 +35,6 @@ uses Math, CastleRectangles, System.StrUtils, CastleLog;
 function LeftPad(const AValue: Integer; const Length: Integer=3; const Pad: Char = '0'): String;
 begin
    Result := RightStr(StringOfChar(Pad,Length) + IntToStr(AValue), Length );
-end;
-
-
-
-function SummariseModel(AOwner: TComponent; const AFilename: String): TModelInfo;
-{
-var
-  model: TCastleModel;
-  }
-begin
-{
-  model := TCastleModel.Create(AOwner);
-  model.LoadModel(AOwner, AFilename, False);
-  if Assigned(model) then
-    begin
-      Result := model.SetInfo;
-    end
-  else
-  }
-    Result := Nil;
-//  model.Free;
 end;
 
 function TCastleViewportHelper.GetAxis(const AModel: TCastleModel): TViewStats;

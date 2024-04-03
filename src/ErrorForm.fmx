@@ -1,8 +1,8 @@
-object frmInfoDialog: TfrmInfoDialog
+object frmErrorDialog: TfrmErrorDialog
   Left = 0
   Top = 0
   BorderIcons = []
-  BorderStyle = ToolWindow
+  BorderStyle = None
   Caption = 'Form3'
   ClientHeight = 216
   ClientWidth = 577
@@ -10,7 +10,6 @@ object frmInfoDialog: TfrmInfoDialog
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
-  OnCreate = FormCreate
   DesignerMasterStyle = 0
   object FormText: TLabel
     Align = Client
@@ -36,15 +35,23 @@ object frmInfoDialog: TfrmInfoDialog
     TabOrder = 1
     object BtnOK: TButton
       Anchors = [akTop, akRight]
-      Position.X = 250.000000000000000000
+      Position.X = 474.000000000000000000
       Position.Y = 6.000000000000000000
       Size.Width = 96.000000000000000000
       Size.Height = 22.000000000000000000
       Size.PlatformDefault = False
       TabOrder = 0
-      Text = 'OK'
+      Text = 'Import'
       TextSettings.Trimming = None
       OnClick = BtnOKClick
+    end
+    object BtnCancel: TButton
+      Position.X = 8.000000000000000000
+      Position.Y = 6.000000000000000000
+      TabOrder = 2
+      Text = 'Cancel'
+      TextSettings.Trimming = None
+      OnClick = BtnCancelClick
     end
   end
 end

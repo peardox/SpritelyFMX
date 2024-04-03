@@ -51,7 +51,8 @@ type
     fWaitingModel: TCastleModel;
     fCamWidth: Single;
     fCamHeight: Single;
-    fAxis: TAxisGrid;
+    fAxis: TAxis;
+    fGrid: TGrid;
     fDyDx: Single;
     fFrame: Integer;
     fIsReady: Boolean;
@@ -151,7 +152,7 @@ begin
   if(SystemSettings.LastModel <> EmptyStr) and (FileExists(SystemSettings.LastModel)) then
     begin
       model := fModels.AddModel(SystemSettings.LastModel);
-      if model.BoundingBox.IsEmpty then
+      if not Assigned(model) or model.BoundingBox.IsEmpty then
         begin
         { If bad model reset last model and free the dud}
           SystemSettings.LastModel := '';
@@ -164,7 +165,7 @@ begin
           fAxis.SetGround(model);
           model.ShowDebugBox(True);
           model.SelectModel;
-          model.SetInfo;
+//          model.SetInfo;
           DoOnModel(model);
           FitViewToModel(model);
           Exit;
@@ -177,7 +178,7 @@ begin
       fStage.Add(model);
       fAxis.SetGround(model);
       model.SelectModel;
-      model.SetInfo;
+//      model.SetInfo;
       DoOnModel(model);
       FitViewToModel(model);
     end;
@@ -285,8 +286,11 @@ begin
 
   fUniverse := TCastleScene.Create(Self);
 
-  fAxis := TAxisGrid.Create(Self, Vector3(0,0,1),2);
+  fAxis := TAxis.Create(Self, Vector3(0,0,1),2);
   fUniverse.Add(fAxis);
+
+  fGrid := TGrid.Create(Self, Vector3(0.2,0.2,0.2),100,0.5);
+  fUniverse.Add(fGrid);
 {
   fCamWidget := TCameraWidget.Create(Self, Vector3(1,0,0),1920,1080);
   fCamWidget.Translation := Vector3(0,0,2);

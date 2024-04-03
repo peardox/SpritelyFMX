@@ -76,6 +76,7 @@ type
   private
     fIsValid: Boolean;
     fModel: TCastleModel;
+    fFile: String;
     fName: String;
     fHash: String;
     fTranslation: TVector3;
@@ -89,9 +90,10 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    constructor SetInfo(const AModel: TCastleModel);
+    procedure SetInfo(const AModel: TCastleModel);
     property IsValid: Boolean read fIsValid write fIsValid;
     property Model: TCastleModel read fModel write fModel;
+    property ModelFile: String read fFile write fFile;
     property Name: String read fName write fName;
     property Hash: String read fHash write fHash;
     property Translation: TVector3 read fTranslation write fTranslation;
@@ -134,6 +136,7 @@ uses
   CastleApp,
   System.Hash,
   CastleLog,
+  SpritelySettings,
   CastleBoxes,
   FrameToImage,
   System.IOUtils,
@@ -601,8 +604,8 @@ begin
     begin
       model := TCastleModel.Create(Owner);
       model.Align := AlignValue;
+      model.Load(AFileName);
       try
-        model.Load(AFileName);
         if Assigned(model) then
           begin
             fChildren.Add(model);
@@ -617,7 +620,7 @@ begin
         on E : Exception do
           begin
             FreeAndNil(model);
-//            Raise Exception.Create('Error in TModelPack.AddModel : ' + E.ClassName + ' - ' + E.Message);
+            WriteLnLog('Error in TModelPack.AddModel : ' + E.ClassName + ' - ' + E.Message);
            end;
       end;
     end;
@@ -656,7 +659,7 @@ begin
   fAnimations := Nil;
 end;
 
-constructor TModelInfo.SetInfo(const AModel: TCastleModel);
+procedure TModelInfo.SetInfo(const AModel: TCastleModel);
 var
   I: Integer;
 begin
@@ -664,7 +667,8 @@ begin
   fAnimations := Nil;
   fIsValid := True;
   fModel := AModel;
-  fName := TPath.GetFileName(AModel.Url);
+  fFile := CopyString(AModel.Url);
+  fName := CopyString(TPath.GetFileName(AModel.Url));
   if FileExists(AModel.Url) then
     fHash := THashMD5.GetHashStringFromFile(AModel.Url)
   else
@@ -679,7 +683,7 @@ begin
       fAnimations := TList<String>.Create;
       for I := 0 to fAnimationCount - 1 do
         begin
-          fAnimations.Add(AModel.AnimationsList[I]);
+          fAnimations.Add(CopyString(AModel.AnimationsList[I]));
         end;
     end;
 

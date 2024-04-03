@@ -1,6 +1,6 @@
 unit SpritelySettings;
 
-// {$define badtex}
+{$define badtex}
 
 interface
 
@@ -33,19 +33,22 @@ type
   TProjectionArray = TArray<TProjection>;
 
   TAnimationConfig = record
-    FramesPerSecond: Single;
-    ConstantSpeed: Boolean;
+    FramesPerSecond: Integer;
+    ConstantFramesPerSprite: Boolean;
     FramesPerSprite: Integer;
-    TimePerSpriteFrame: Single;
   end;
 
   TViewportConfig = record
     DefaultView: Integer;
+    ZoomAndPan: Boolean;
+    UseModelCenter: Boolean;
+    Autofit: Boolean;
   end;
 
   TPickerConfig = record
     ThumbConfig: TThumbnailOption;
     PreloadConfig: TPreloadOption;
+    UpDownLoadsModel: Boolean;
   end;
 
   TConfig = record
@@ -85,6 +88,8 @@ type
     destructor Destroy; override;
   end;
 
+function CopyString(const AValue: String): String;
+
 var
   SystemSettings: TPDXSettings = Nil;
 
@@ -99,6 +104,12 @@ uses
   Math,
   CastleGLUtils,
   JSON.Serializers;
+
+function CopyString(const AValue: String): String;
+begin
+  Result := Copy(AValue, 1, Length(AValue));
+end;
+
 
 constructor TPDXSettings.Create;
 begin
@@ -172,12 +183,15 @@ procedure TPDXSettings.SetDefaultConfig;
 begin
   Config := Default(TConfig);
   Config.Animation.FramesPerSecond := 30;
-  Config.Animation.ConstantSpeed := False;
+  Config.Animation.ConstantFramesPerSprite := False;
   Config.Animation.FramesPerSprite := 8;
-  Config.Animation.TimePerSpriteFrame := 0.125;
   Config.Viewport.DefaultView := 3;
+  Config.Viewport.ZoomAndPan := False;
+  Config.Viewport.UseModelCenter := False;
+  Config.Viewport.Autofit := True;
   Config.Picker.ThumbConfig := TThumbnailOption.ThumbnailOnDemand;
   Config.Picker.PreloadConfig := TPreloadOption.PreloadOnDemand;
+  Config.Picker.UpDownLoadsModel := False;
 end;
 
 procedure TPDXSettings.SetDefaults;
@@ -188,20 +202,29 @@ end;
 procedure TPDXSettings.ExtractAnimationConfig(AValue: TJSONObject);
 begin
   AValue.TryGetValue('FramesPerSecond', Config.Animation.FramesPerSecond);
-  AValue.TryGetValue('ConstantSpeed', Config.Animation.ConstantSpeed);
+  AValue.TryGetValue('ConstantSpeed', Config.Animation.ConstantFramesPerSprite);
   AValue.TryGetValue('FramesPerSprite', Config.Animation.FramesPerSprite);
-  AValue.TryGetValue('TimePerSpriteFrame', Config.Animation.TimePerSpriteFrame);
 end;
 
 procedure TPDXSettings.ExtractViewportConfig(AValue: TJSONObject);
 begin
   AValue.TryGetValue('DefaultView', Config.Viewport.DefaultView);
+  if not AValue.TryGetValue('ZoomAndPan', Config.Viewport.ZoomAndPan) then
+    Config.Viewport.ZoomAndPan := False;
+  if not AValue.TryGetValue('UseModelCenter', Config.Viewport.UseModelCenter) then
+    Config.Viewport.UseModelCenter := False;
+  if not AValue.TryGetValue('Autofit', Config.Viewport.Autofit) then
+    Config.Viewport.Autofit := True;
 end;
 
 procedure TPDXSettings.ExtractPickerConfig(AValue: TJSONObject);
 begin
-  AValue.TryGetValue('ThumbConfig', Config.Picker.ThumbConfig);
-  AValue.TryGetValue('PreloadConfig', Config.Picker.PreloadConfig);
+  if not AValue.TryGetValue('ThumbConfig', Config.Picker.ThumbConfig) then
+    Config.Picker.ThumbConfig := TThumbnailOption.ThumbnailOnDemand;
+  if not AValue.TryGetValue('PreloadConfig', Config.Picker.PreloadConfig) then
+    Config.Picker.PreloadConfig := TPreloadOption.PreloadOnDemand;
+  if not AValue.TryGetValue('UpDownLoadsModel', Config.Picker.UpDownLoadsModel) then
+    Config.Picker.UpDownLoadsModel := False;
 end;
 
 procedure TPDXSettings.ExtractConfig(AConfig: TJSONObject);
@@ -215,9 +238,8 @@ begin
   else
     begin
       Config.Animation.FramesPerSecond := 30;
-      Config.Animation.ConstantSpeed := False;
+      Config.Animation.ConstantFramesPerSprite := False;
       Config.Animation.FramesPerSprite := 8;
-      Config.Animation.TimePerSpriteFrame := 0.125;
     end;
 
   if AConfig.TryGetValue('Viewport', jobj) then
@@ -227,6 +249,9 @@ begin
   else
     begin
       Config.Viewport.DefaultView := 3;
+      Config.Viewport.ZoomAndPan := False;
+      Config.Viewport.UseModelCenter := False;
+      Config.Viewport.Autofit := True;
     end;
 
   if AConfig.TryGetValue('Picker', jobj) then
@@ -237,6 +262,7 @@ begin
     begin
       Config.Picker.ThumbConfig := TThumbnailOption.ThumbnailOnDemand;
       Config.Picker.PreloadConfig := TPreloadOption.PreloadOnDemand;
+      Config.Picker.UpDownLoadsModel := False;
     end;
 end;
 
@@ -326,7 +352,7 @@ begin
 
     except
      on E : Exception do
-       Raise Exception.Create('Load Settings - Exception : Class = ' +
+       WriteLnLog('CGE - Exception : Class = ' +
         E.ClassName + ', Message = ' + E.Message);
     end;
   finally

@@ -26,6 +26,8 @@ type
 procedure CheckGLTFTextures(const ADir: String);
 function ScanGLTFModels(const ADir: String; const OwnObjects: Boolean = True): TObjectList<TFileDirectory>;
 function ScanOBJModels(const ADir: String; const OwnObjects: Boolean = True): TObjectList<TFileDirectory>;
+function ScanDAEModels(const ADir: String; const OwnObjects: Boolean = True): TObjectList<TFileDirectory>;
+function ScanSTLModels(const ADir: String; const OwnObjects: Boolean = True): TObjectList<TFileDirectory>;
 procedure SaveModelList(const AFilename: String; const AList: TFileDirectoryList);
 
 implementation
@@ -153,17 +155,6 @@ begin
     end;
 end;
 
-function ScanGLTFModels(const ADir: String; const OwnObjects: Boolean): TObjectList<TFileDirectory>;
-var
-  TheList: TObjectList<TFileDirectory>;
-  Group: Integer;
-begin
-  Group := 0;
-  TheList := TObjectList<TFileDirectory>.Create(OwnObjects);
-  ScanModels(ADir, '', ['.gltf', '.glb'], TheList, Group);
-  Result := TheList;
-end;
-
 procedure SaveModelList(const AFilename: String; const AList: TFileDirectoryList);
 var
   lSerializer: TJsonSerializer;
@@ -190,6 +181,39 @@ begin
   finally
     FreeAndNil(lSerializer);
   end;
+end;
+
+function ScanGLTFModels(const ADir: String; const OwnObjects: Boolean): TObjectList<TFileDirectory>;
+var
+  TheList: TObjectList<TFileDirectory>;
+  Group: Integer;
+begin
+  Group := 0;
+  TheList := TObjectList<TFileDirectory>.Create(OwnObjects);
+  ScanModels(ADir, '', ['.gltf', '.glb'], TheList, Group);
+  Result := TheList;
+end;
+
+function ScanDAEModels(const ADir: String; const OwnObjects: Boolean = True): TObjectList<TFileDirectory>;
+var
+  TheList: TObjectList<TFileDirectory>;
+  Group: Integer;
+begin
+  Group := 0;
+  TheList := TObjectList<TFileDirectory>.Create(OwnObjects);
+  ScanModels(ADir, '', ['.dae'], TheList, Group);
+  Result := TheList;
+end;
+
+function ScanSTLModels(const ADir: String; const OwnObjects: Boolean = True): TObjectList<TFileDirectory>;
+var
+  TheList: TObjectList<TFileDirectory>;
+  Group: Integer;
+begin
+  Group := 0;
+  TheList := TObjectList<TFileDirectory>.Create(OwnObjects);
+  ScanModels(ADir, '', ['.stl'], TheList, Group);
+  Result := TheList;
 end;
 
 function ScanOBJModels(const ADir: String; const OwnObjects: Boolean): TObjectList<TFileDirectory>;

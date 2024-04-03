@@ -18,7 +18,10 @@ uses
   SpritelyCheckTextures in 'src\SpritelyCheckTextures.pas',
   SpritelyAxisGrid in 'src\SpritelyAxisGrid.pas',
   FrameToImage in 'src\FrameToImage.pas',
-  LoadingForm in 'src\LoadingForm.pas' {frmLoadingDialog};
+  LoadingForm in 'src\LoadingForm.pas' {frmLoadingDialog},
+  InfoForm in 'src\InfoForm.pas',
+  ModelManager in 'src\ModelManager.pas',
+  SettingsForm in 'src\SettingsForm.pas' {frmSettingsDialog};
 
 {$R *.res}
 

@@ -1,4 +1,4 @@
-unit InfoForm;
+unit ErrorForm;
 
 interface
 
@@ -8,52 +8,47 @@ uses
   FMX.Controls.Presentation;
 
 type
-  TfrmInfoDialog = class(TForm)
+  TfrmErrorDialog = class(TForm)
     FormText: TLabel;
     Panel1: TPanel;
     BtnOK: TButton;
+    BtnCancel: TButton;
     procedure BtnCancelClick(Sender: TObject);
     procedure BtnOKClick(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
     procedure FormReset;
   public
     { Public declarations }
-    procedure Setup(const MessageText: String);
+    procedure Setup(const MessageText: String; const TextOK: String = 'OK'; const TextCancel: String = 'Cancel');
   end;
 
 implementation
 
 {$R *.fmx}
 
-uses
-  SpritelySettings;
-
-procedure TfrmInfoDialog.BtnOKClick(Sender: TObject);
+procedure TfrmErrorDialog.BtnOKClick(Sender: TObject);
 begin
   ModalResult := mrOK;
 end;
 
-procedure TfrmInfoDialog.BtnCancelClick(Sender: TObject);
+procedure TfrmErrorDialog.BtnCancelClick(Sender: TObject);
 begin
   ModalResult := mrCancel;
 end;
 
-procedure TfrmInfoDialog.Setup(const MessageText: String);
+procedure TfrmErrorDialog.Setup(const MessageText: String; const TextOK: String = 'OK'; const TextCancel: String = 'Cancel');
 begin
   FormReset;
   FormText.Text := MessageText;
+  BtnOK.Text := TextOK;
+  BtnCancel.Text := TextCancel;
 end;
 
-procedure TfrmInfoDialog.FormCreate(Sender: TObject);
-begin
-  Caption := APPNAME;
-end;
-
-procedure TfrmInfoDialog.FormReset;
+procedure TfrmErrorDialog.FormReset;
 begin
   BtnOK.Enabled := True;
+  BtnCancel.Enabled := True;
   ModalResult := mrNone;
 end;
 

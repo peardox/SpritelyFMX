@@ -5,7 +5,7 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Generics.Collections,
   CastleDebugTransform, CastleColors,
   CastleScene, CastleQuaternions, CastleVectors,
-  SpritelyTypes,
+  Sprite3DTypes,
   CastleModel;
 
 type

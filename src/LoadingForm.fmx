@@ -10,6 +10,7 @@ object frmLoadingDialog: TfrmLoadingDialog
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
+  OnShow = FormShow
   DesignerMasterStyle = 0
   object Panel1: TPanel
     Align = Bottom
@@ -45,6 +46,7 @@ object frmLoadingDialog: TfrmLoadingDialog
       Size.PlatformDefault = False
       TabOrder = 1
       Text = 'Abort'
+      TextSettings.Trimming = None
       OnClick = Button1Click
     end
   end
@@ -56,7 +58,7 @@ object frmLoadingDialog: TfrmLoadingDialog
     Size.Height = 184.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 4
-    Viewport.Width = 577.000000000000000000
-    Viewport.Height = 184.000000000000000000
+    Viewport.Width = 573.000000000000000000
+    Viewport.Height = 180.000000000000000000
   end
 end

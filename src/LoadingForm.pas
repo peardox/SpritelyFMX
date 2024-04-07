@@ -6,7 +6,7 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls,
   FMX.Controls.Presentation,
-  SpritelyTypes, FMX.Memo.Types, FMX.ScrollBox, FMX.Memo;
+  Sprite3DTypes, FMX.Memo.Types, FMX.ScrollBox, FMX.Memo;
 
 type
 // TPDXMessageEvent = procedure (Sender: TObject; const Msg: String) of object;
@@ -19,6 +19,7 @@ type
     procedure BtnCancelClick(Sender: TObject);
     procedure BtnOKClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
     reqContinue: Boolean;
@@ -38,7 +39,7 @@ implementation
 
 {$R *.fmx}
 uses
-  SpritelySettings;
+  Sprite3DSettings;
 
 
 procedure TfrmLoadingDialog.BtnOKClick(Sender: TObject);
@@ -92,5 +93,10 @@ begin
   ModalResult := mrNone;
 end;
 
+
+procedure TfrmLoadingDialog.FormShow(Sender: TObject);
+begin
+  Application.ProcessMessages;
+end;
 
 end.

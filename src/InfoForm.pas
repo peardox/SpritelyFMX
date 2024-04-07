@@ -15,6 +15,7 @@ type
     procedure BtnCancelClick(Sender: TObject);
     procedure BtnOKClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
     procedure FormReset;
@@ -28,7 +29,7 @@ implementation
 {$R *.fmx}
 
 uses
-  SpritelySettings;
+  Sprite3DSettings;
 
 procedure TfrmInfoDialog.BtnOKClick(Sender: TObject);
 begin
@@ -57,5 +58,10 @@ begin
   ModalResult := mrNone;
 end;
 
+
+procedure TfrmInfoDialog.FormShow(Sender: TObject);
+begin
+  Application.ProcessMessages;
+end;
 
 end.

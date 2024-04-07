@@ -11,6 +11,7 @@ object frmSettingsDialog: TfrmSettingsDialog
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
   OnCreate = FormCreate
+  OnShow = FormShow
   DesignerMasterStyle = 0
   object Panel1: TPanel
     Align = Bottom
@@ -57,6 +58,7 @@ object frmSettingsDialog: TfrmSettingsDialog
       CustomIcon = <
         item
         end>
+      TextSettings.Trimming = None
       IsSelected = True
       Size.Width = 57.000000000000000000
       Size.Height = 26.000000000000000000
@@ -64,6 +66,8 @@ object frmSettingsDialog: TfrmSettingsDialog
       StyleLookup = ''
       TabOrder = 0
       Text = 'Project'
+      ExplicitSize.cx = 57.000000000000000000
+      ExplicitSize.cy = 26.000000000000000000
       object swUpDownAction: TSwitch
         IsChecked = False
         Position.X = 441.000000000000000000
@@ -145,6 +149,7 @@ object frmSettingsDialog: TfrmSettingsDialog
       CustomIcon = <
         item
         end>
+      TextSettings.Trimming = None
       IsSelected = False
       Size.Width = 75.000000000000000000
       Size.Height = 26.000000000000000000
@@ -152,6 +157,8 @@ object frmSettingsDialog: TfrmSettingsDialog
       StyleLookup = ''
       TabOrder = 0
       Text = 'Animation'
+      ExplicitSize.cx = 75.000000000000000000
+      ExplicitSize.cy = 26.000000000000000000
       object swConstantSpeed: TSwitch
         IsChecked = False
         Position.X = 441.000000000000000000

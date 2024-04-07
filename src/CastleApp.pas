@@ -16,8 +16,8 @@ uses
   CastleControls,
   CastleModel,
   SphericalCamera,
-  SpritelyAxisGrid,
-  SpritelyTypes;
+  Sprite3DDebug,
+  Sprite3DTypes;
 
 type
   TCastleApp = class(TCastleView)
@@ -57,6 +57,8 @@ type
     fFrame: Integer;
     fIsReady: Boolean;
     fWaitingToFit: Boolean;
+    fAutoRotate: Boolean;
+    fAutoRotateAngle: Single;
     procedure SendMessage(const AMsg: String);
     procedure SetDoExtMessage(const AProc: TPDXMessageEvent);
     procedure SetDoOnModel(const AProc: TPDXModelEvent);
@@ -82,6 +84,7 @@ type
     function AddModel(const AFilename: String): TCastleModel;
     function PreloadModel(const AFilename: String): TCastleModel;
     function CloneModel(const AModel: TCastleModel): TCastleModel;
+    function SwitchModel(const AModel: TCastleModel): TCastleModel;
     procedure RemoveModel(const AModel: TCastleModel);
     procedure RemoveModels;
     procedure ResizeView;
@@ -109,6 +112,9 @@ type
     property DyDx: Single read fDyDx;
     property OnCameraChange: TNotifyEvent read fCameraChange write fCameraChange;
     property NewPan: TVector2 read fNewPan write fNewPan;
+    property AutoRotate: Boolean read fAutoRotate write fAutoRotate;
+    property AutoRotateAngle: Single read fAutoRotateAngle write fAutoRotateAngle;
+    property Frame: Integer read fFrame write fFrame;
   end;
 
 const
@@ -120,14 +126,16 @@ uses
   Math,
   X3DLoad,
   CastleLog,
+  CastleUtils,
   CastleUriUtils,
   CastleRectangles,
-  SpritelySettings,
+  Sprite3DSettings,
   CastleProjection;
 
 constructor TCastleApp.Create(AOwner: TComponent);
 begin
   inherited;
+  fAutoRotate := False;
   fZoomFactor2D := 1.0;
   fZoomFactor3D := 75.0;
   fIsReady := False;
@@ -163,6 +171,7 @@ begin
         { otherwise let's load the last model }
           fStage.Add(model);
           fAxis.SetGround(model);
+          fGrid.SetGround(model);
           model.ShowDebugBox(True);
           model.SelectModel;
 //          model.SetInfo;
@@ -177,6 +186,7 @@ begin
       model := fModels.AddModel(DEFAULT_MODEL);
       fStage.Add(model);
       fAxis.SetGround(model);
+      fGrid.SetGround(model);
       model.SelectModel;
 //      model.SetInfo;
       DoOnModel(model);
@@ -273,7 +283,8 @@ begin
   bb := TDebugTransformBox.Create(Self);
   bb.Parent := fStage;
   bb.BoxColor := Orange;
-  bb.Exists := True;
+//  bb.Exists := True;
+  bb.Exists := False;
 end;
 
 procedure TCastleApp.LoadViewport;
@@ -387,11 +398,13 @@ begin
       if not fStageMultipleModels then
         begin
           fAxis.SetGround(model);
+          fGrid.SetGround(model);
           FitViewToModel(fStage);
         end
       else
         begin
           fAxis.SetGround(fStage);
+          fGrid.SetGround(model);
           FitViewToModel(fStage);
         end;
     end;
@@ -427,11 +440,53 @@ begin
       if not fStageMultipleModels then
         begin
           fAxis.SetGround(model);
+          fGrid.SetGround(model);
           FitViewToModel(fStage);
         end
       else
         begin
           fAxis.SetGround(fStage);
+          fGrid.SetGround(model);
+          FitViewToModel(fStage);
+        end;
+    end;
+end;
+
+function TCastleApp.SwitchModel(const AModel: TCastleModel): TCastleModel;
+var
+  model: TCastleModel;
+begin
+  Result := Nil;
+  if Assigned(fStage) and Assigned(AModel) then
+    begin
+      if not fStageMultipleModels then
+        begin
+          fStage.ClearAndFreeItems;
+          fSelectedModel := Nil;
+          StageApplyBox;
+        end;
+
+      model := AModel;
+{$ifdef normal}
+      model.Normalize;
+{$endif}
+      Result := model;
+      if fStageMultipleModels and not model.BoundingBox.IsEmptyOrZero then
+        begin
+          model.Translation := model.Translation + model.AlignTo(FSelectedModel, ModelAlignYBottom, Vector3(0,0,0));
+        end;
+      fStage.Add(model);
+      model.SelectModel;
+      if not fStageMultipleModels then
+        begin
+          fAxis.SetGround(model);
+          fGrid.SetGround(model);
+          FitViewToModel(fStage);
+        end
+      else
+        begin
+          fAxis.SetGround(fStage);
+          fGrid.SetGround(model);
           FitViewToModel(fStage);
         end;
     end;
@@ -516,7 +571,10 @@ end;
 procedure TCastleApp.RemoveModel(const AModel: TCastleModel);
 begin
   fStage.Remove(AModel);
-  FreeAndNil(AModel);
+  if not (AModel.Owner is TModelPack) then
+    begin
+      FreeAndNil(AModel);
+    end;
 end;
 
 procedure TCastleApp.RemoveModels;
@@ -538,6 +596,24 @@ procedure TCastleApp.BeforeRender;
 begin
   inherited;
   Resize;
+
+  if fAutoRotate then
+    begin
+      fAutoRotateAngle := fAutoRotateAngle + 1;
+      while fAutoRotateAngle > 360 do
+        fAutoRotateAngle := fAutoRotateAngle - 360;
+      while fAutoRotateAngle < 0 do
+        fAutoRotateAngle := fAutoRotateAngle + 360;
+      fStage.Rotation := Vector4(0, 1, 0, DegToRad(fAutoRotateAngle));
+    end
+  else
+    if fAutoRotateAngle <> 0 then
+      begin
+        fAutoRotateAngle := 0;
+        fStage.Rotation := Vector4(0, 1, 0, DegToRad(fAutoRotateAngle));
+      end;
+
+
   if fUse3D then
     begin
       if fCamera.ProjectionType <> ptPerspective then

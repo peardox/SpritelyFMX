@@ -3,16 +3,25 @@ unit CastleHelpers;
 interface
 
 uses  System.SysUtils, System.Classes, System.Types, CastleScene, CastleVectors,
-  CastleViewport, CastleCameras, CastleProjection, CastleTransform,
-  SpritelyTypes,
+  CastleViewport, CastleCameras, CastleProjection, CastleTransform, CastleBoxes,
+  Sprite3DTypes, CastleShapes,
   CastleModel;
 
 
 type
   { TCastleViewHelper }
+  TCastleSceneHelper = class helper for TCastleScene
+  private
+    function CalculateFrameBoundingBox: TBox3D;
+  public
+    function FrameBoundingBox: TBox3D;
+  end;
+
   TCastleViewportHelper = class helper for TCastleViewport
+  private
   public
     function CalcAngles(const AScene: TCastleScene): TExtents;
+    function FrameCalcAngles(const AScene: TCastleScene): TExtents;
     function CenterViewPan(const AModel: TCastleModel; const APan: TVector2): TVector2; overload;
     function CenterViewPan(const AModel: TCastleModel; const APan: TVector2; const ContainerWidth: Single; const ContainerHeight: Single): TVector2; overload;
     function GetAxis(const AModel: TCastleModel): TViewStats; overload;
@@ -241,6 +250,55 @@ begin
   Result := Extents;
 end;
 
+function TCastleViewportHelper.FrameCalcAngles(const AScene: TCastleScene): TExtents;
+var
+  OutputMatrix:TMatrix4;
+  OutputPoint3D: TVector3;
+  i: Integer;
+  Extents: TExtents;
+begin
+  Extents.isValid := False;
+  Extents.Min := Vector3(Infinity, Infinity, Infinity);
+  Extents.Max := Vector3(-Infinity, -Infinity, -Infinity);
+  Extents.Pixels.X := EffectiveWidth;
+  Extents.Pixels.Y := EffectiveHeight;
+
+  if ((EffectiveWidth > 0) and (EffectiveHeight > 0) and Assigned(AScene) and not AScene.BoundingBox.IsEmptyOrZero) then
+	begin
+	  AScene.FrameBoundingBox.Corners(Extents.corners);
+    OutputMatrix := Camera.ProjectionMatrix * Camera.Matrix * AScene.WorldTransform;
+	  for i := Low(Extents.corners) to High(Extents.corners) do
+		begin
+		  OutputPoint3D := OutputMatrix.MultPoint(Extents.corners[i]);
+		  if OutputPoint3D.X < Extents.Min.X then
+		  	Extents.Min.X := OutputPoint3D.X;
+		  if OutputPoint3D.Y < Extents.Min.Y then
+	  		Extents.Min.Y := OutputPoint3D.Y;
+		  if OutputPoint3D.Z < Extents.Min.Z then
+	  		Extents.Min.Z := OutputPoint3D.Z;
+		  if OutputPoint3D.X > Extents.Max.X then
+  			Extents.Max.X := OutputPoint3D.X;
+		  if OutputPoint3D.Y > Extents.Max.Y then
+			  Extents.Max.Y := OutputPoint3D.Y;
+		  if OutputPoint3D.Z > Extents.Max.Z then
+			  Extents.Max.Z := OutputPoint3D.Z;
+      Extents.corners[i] := Vector3(OutputPoint3D.X, OutputPoint3D.Y, OutputPoint3D.Z);
+		end;
+
+    Extents.Aspect := EffectiveWidth / EffectiveHeight;
+
+	  Extents.Size.X := (Extents.Max.X - Extents.Min.X);
+	  Extents.Size.Y := (Extents.Max.Y - Extents.Min.Y);
+	  Extents.Size.Z := (Extents.Max.Z - Extents.Min.Z);
+	  Extents.Aspect := Extents.Size.X / Extents.Size.Y;
+
+    Extents.isValid := True;
+
+	end;
+
+  Result := Extents;
+end;
+
 function TCastleViewportHelper.WorldToViewport(AModel: TCastleModel; AVec: TVector2): TVector2;
 begin
   Result := WorldToViewport(AModel, AVec, Container.UnscaledWidth, Container.UnscaledHeight);
@@ -288,5 +346,23 @@ begin
   Result := Light;
 end;
 
+
+{ TCastleSceneHelper }
+
+function TCastleSceneHelper.CalculateFrameBoundingBox: TBox3D;
+var
+  ShapeList: TShapeList;
+  Shape: TShape;
+begin
+  Result := TBox3D.Empty;
+  ShapeList := Shapes.TraverseList(true);
+  for Shape in ShapeList do
+    Result.Include(Shape.BoundingBox);
+end;
+
+function TCastleSceneHelper.FrameBoundingBox: TBox3D;
+begin
+    Result := CalculateFrameBoundingBox.Transform(Transform);
+end;
 
 end.

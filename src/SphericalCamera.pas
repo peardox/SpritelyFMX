@@ -4,7 +4,7 @@ interface
 
 uses  System.SysUtils, System.Classes, System.Types, CastleScene, CastleVectors,
   CastleViewport, CastleCameras, CastleProjection, CastleTransform,
-  SpritelyTypes;
+  Sprite3DTypes;
 
 type
   TSphericalCamera = class(TCastleTransform)

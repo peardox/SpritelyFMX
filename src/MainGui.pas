@@ -14,14 +14,15 @@ uses
   FMX.ScrollBox, FMX.Memo, FMX.TabControl, Fmx.CastleControl, System.Rtti,
   FMX.Grid.Style, FMX.Grid,
   CastleModel,
-  SpritelyControls,
-  SpritelyCheckTextures,
-  SpritelySettings,
+  Sprite3DCheckTextures,
+  Sprite3DSettings,
+  X3DFields,
+  X3DTIme,
   FrameToImage,
   ModelManager,
-  SpritelyTypes, FMX.Objects, FMX.ListBox, FMX.ListView.Types,
+  Sprite3DTypes, FMX.Objects, FMX.ListBox, FMX.ListView.Types,
   FMX.ListView.Appearances, FMX.ListView.Adapters.Base, FMX.ListView,
-  FMX.TreeView, System.ImageList, FMX.ImgList
+  FMX.TreeView, System.ImageList, FMX.ImgList, FMX.Media
   ;
 
 type
@@ -57,16 +58,13 @@ type
     TreeView1: TTreeView;
     Timer1: TTimer;
     mnuSaveImage: TMenuItem;
-    ImageList1: TImageList;
+    PickerImages: TImageList;
     TabCamera: TTabItem;
-    CameraRotationLayout: TLayout;
-    CameraInclinationLayout: TLayout;
     StringGrid2: TStringGrid;
     StringColumn3: TStringColumn;
     StringColumn4: TStringColumn;
     LayoutPreview: TLayout;
     mnuCheckMem: TMenuItem;
-    Button1: TButton;
     Label1: TLabel;
     ImageControl1: TImageControl;
     TabSprite: TTabItem;
@@ -83,6 +81,17 @@ type
     mnuSTLDir: TMenuItem;
     mnuOptions: TMenuItem;
     mnuExit: TMenuItem;
+    MediaImages: TImageList;
+    mnuAutoRotate: TMenuItem;
+    mnuAutoRotateWorld: TMenuItem;
+    mnuAutoRotateModel: TMenuItem;
+    Panel1: TPanel;
+    btnPlay: TButton;
+    btnPause: TButton;
+    ArcDial1: TArcDial;
+    TrackBar1: TTrackBar;
+    Label2: TLabel;
+    Label3: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure LayoutLeftResize(Sender: TObject);
     procedure SwitchView;
@@ -117,11 +126,16 @@ type
     procedure mnuDAEDirClick(Sender: TObject);
     procedure mnuOptionsClick(Sender: TObject);
     procedure mnuExitClick(Sender: TObject);
+    procedure btnPlayClick(Sender: TObject);
+    procedure btnPauseClick(Sender: TObject);
+    procedure mnuAutoRotateClick(Sender: TObject);
+    procedure ArcDial1Change(Sender: TObject);
+    procedure TrackBar1Change(Sender: TObject);
   private
     { Private declarations }
     mm: TModelManager;
-    cameraAngle: TPDXRadialDial;
-    cameraInclination: TPDXArcDial;
+    ExeParam: String;
+    PickedModel: TModelInfo;
     CastleControl: TCastleControl;
     CastleApp: TCastleApp;
     OutputSize: TUnitConfig;
@@ -146,6 +160,12 @@ type
     procedure MemStat(const OnlyNow: Boolean = False);
     function ScanModelDirClick(SelDir: String; AList: TObjectList<TFileDirectory>): Integer;
     procedure ResetZoomAndPan;
+    procedure SetAutoRotate;
+    procedure ReceivedElapsedTime(const Event: TX3DEvent;
+      const Value: TX3DField; const Time: TX3DTime);
+    function Analyse(const mi: TModelInfo; const Rotations, AniIndex: Integer;
+      const AniTime: Single): Boolean;
+    procedure ManualAnalyse;
   public
     { Public declarations }
   end;
@@ -169,6 +189,7 @@ uses
   System.DateUtils,
   System.IOUtils,
   CastleLog,
+  X3DNodes,
   CastleHelpers,
   CastleCameras,
   CastleTransform,
@@ -216,6 +237,21 @@ begin
     end;
 end;
 
+procedure TForm1.TrackBar1Change(Sender: TObject);
+begin
+  Label3.Text := Format('%4.2f',[TrackBar1.Value]);
+  CastleApp.Inclination := DegToRad(-TrackBar1.Value);
+end;
+
+procedure TForm1.ArcDial1Change(Sender: TObject);
+var
+  MappedVal: Single;
+begin
+  MappedVal := fmod(-ArcDial1.Value + 360, 360);
+  Label2.Text := FloatToStr(MappedVal);
+  CastleApp.Azimuth := DegToRad(MappedVal);
+end;
+
 procedure TForm1.cbxProjectionsChange(Sender: TObject);
 begin
   if Assigned(CastleApp) then
@@ -223,13 +259,8 @@ begin
       if (cbxProjections.ItemIndex >= 0) and (cbxProjections.ItemIndex < Length(SystemSettings.Projections)) then
         begin
           SystemSettings.Config.Viewport.DefaultView := cbxProjections.ItemIndex;
-          cameraInclination.Angle := SystemSettings.Projections[cbxProjections.ItemIndex].Inclination;
-          cameraAngle.Angle := SystemSettings.Projections[cbxProjections.ItemIndex].Azimuth;
-          {
-          CastleApp.Inclination := cameraInclination.Angle;
-          CastleApp.Azimuth := cameraAngle.Angle;
-          }
-//          UpdateCamInfo(Self);
+          TrackBar1.Value := RadToDeg((Pi/2) - SystemSettings.Projections[cbxProjections.ItemIndex].Inclination);
+          ArcDial1.Value := RadToDeg(-SystemSettings.Projections[cbxProjections.ItemIndex].Azimuth);
         end;
     end;
 end;
@@ -260,13 +291,13 @@ begin
   if AStyle = EmptyStr then
     begin
      {$IF DEFINED(MSWINDOWS)}
-//      NewStyle := '../../Styles/RubyGraphite.style';
-//      NewStyle := '../../Styles/Radiant.Win.style';
-//      NewStyle := '../../Styles/Vapor.Win.style';
-      NewStyle := '../../Styles/Win10ModernBlue.style';
-//      NewStyle := '../../Styles/Sterling.Win.style';
-//      NewStyle := '../../Styles/MaterialOxfordBlue_Win.style';
-//      NewStyle := '../../Styles/Win10ModernDark.style';
+//      NewStyle := SystemSettings.StyleData + 'RubyGraphite.style';
+//      NewStyle := SystemSettings.StyleData + 'Radiant.Win.style';
+//      NewStyle := SystemSettings.StyleData + 'Vapor.Win.style';
+//      NewStyle := SystemSettings.StyleData + 'Win10ModernBlue.style';
+//      NewStyle := SystemSettings.StyleData + 'Sterling.Win.style';
+//      NewStyle := SystemSettings.StyleData + 'MaterialOxfordBlue_Win.style';
+      NewStyle := SystemSettings.StyleData + 'Win10ModernDark.style';
       {$ENDIF}
       {$IF DEFINED(LINUX)}
       NewStyle := 'Styles/MaterialOxfordBlue_Linux.style';
@@ -285,6 +316,9 @@ end;
 procedure TForm1.FormCreate(Sender: TObject);
 begin
   mm := TModelManager.Create(Self);
+  ExeParam := ParamStr(1);
+
+  PickedModel := Nil;
   OutputSize := UnitConfig(256, 256);
   CastleControl := TCastleControl.Create(View3D);
   CastleControl.Align := TAlignLayout.Client;
@@ -305,18 +339,7 @@ begin
   else
     Caption := APPNAME;
 
-//  CameraInclinationLayout.Height := CameraInclinationLayout.Width;
-
-  cameraAngle := TPDXRadialDial.Create(CameraRotationLayout);
-  cameraAngle.OnRotate := RotateCamera;
-  cameraAngle.Steps := 360;
-  cameraInclination := TPDXArcDial.Create(CameraInclinationLayout);
-  cameraInclination.OnRotate := InclineCamera;
-  cameraInclination.Max := Pi;
-//  cameraInclination.Angle := Pi / 2;
   mnuView3D.IsChecked := False;
-//  camAngle.Position.X := 0;
-//  camAngle.Position.Y := 100;
   StringGrid1.RowCount := 14;
   StringGrid1.Cells[0,0] := 'Extents X';
   StringGrid1.Cells[0,1] := 'Extents Y';
@@ -361,6 +384,7 @@ begin
 
   UpdateModelInfo;
   UpdateCamInfo(Self);
+  TabControl2.ActiveTab := TabCamera;
 
   PopulateProjections;
 
@@ -374,7 +398,7 @@ end;
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
 {$ifdef showfree}
-  WriteLnLog('Freeing TForm1 (and TheFileList)');
+  WriteLnLog('Freeing TForm1');
 {$endif}
 //  if Assigned(TheFileList) then
 //    TheFileList.Free;
@@ -689,7 +713,8 @@ end;
 
 procedure TForm1.MenuItem1Click(Sender: TObject);
 begin
-  SwitchView;
+  ManualAnalyse;
+//  SwitchView;
 end;
 
 function TForm1.ScanModelDirClick(SelDir: String; AList: TObjectList<TFileDirectory>): Integer;
@@ -805,7 +830,7 @@ var
 begin
   if Assigned(CastleApp) then
     begin
-      frame := TFrameExport.Create(Self, 1280,1280);
+      frame := TFrameExport.Create(Self, 256, 256);
       frame.GrabFromCastleApp(CastleApp);
       frame.Save('../../test.png');
  //     frame.Clear;
@@ -962,6 +987,21 @@ begin
   SystemSettings.Config.Viewport.Autofit := mnuAutofit.IsChecked;
 end;
 
+procedure TForm1.mnuAutoRotateClick(Sender: TObject);
+begin
+  mnuAutoRotate.IsChecked := not mnuAutoRotate.IsChecked;
+  SetAutoRotate;
+end;
+
+procedure TForm1.SetAutoRotate;
+begin
+  if Assigned(CastleApp) then
+    begin
+      if mnuAutoRotateModel.IsChecked and mnuAutoRotateWorld.IsChecked then
+        CastleApp.AutoRotate := False;
+    end;
+end;
+
 procedure TForm1.mnuCheckGLTFClick(Sender: TObject);
 var
   SelDir: String;
@@ -1062,12 +1102,16 @@ end;
 procedure TForm1.InclineCamera(Sender: TObject; const ARotation: Single);
 begin
   CastleApp.Inclination := ARotation;
+  Caption := 'Inc = ' + FloatToStr(RadToDeg(CastleApp.Inclination)) + ' : ' +
+             'Azi = ' + FloatToStr(RadToDeg(CastleApp.Azimuth));
   UpdateCamInfo(Self);
 end;
 
 procedure TForm1.RotateCamera(Sender: TObject; const ARotation: Single);
 begin
   CastleApp.Azimuth := ARotation;
+  Caption := 'Inc = ' + FloatToStr(RadToDeg(CastleApp.Inclination)) + ' : ' +
+             'Azi = ' + FloatToStr(RadToDeg(CastleApp.Azimuth));
   UpdateCamInfo(Self);
 end;
 
@@ -1185,7 +1229,6 @@ var
   TItem: TTreeViewItem;
   Obj: TObject;
   mi: TModelInfo;
-  model: TCastleModel;
 begin
 // WriteLnLog('Key = ' + IntToStr(Key) + ' = ' + KeyChar);
   if Key = 13 then
@@ -1203,12 +1246,12 @@ begin
                     Caption := APPNAME + ': ' + mi.Name + ' (ReportMemoryLeaksOnShutdown)'
                   else
                     Caption := APPNAME + ': ' + mi.Name;
-                  model := CastleApp.CloneModel(mi.model);
-                  if Assigned(model) then
+                  CastleApp.SwitchModel(mi.model);
+                  if Assigned(mi.model) then
                     begin
                       if TItem.Tag <> -1 then
                         begin
-                          model.ForceAnimationPose(mi.Animations[TItem.Tag], 0, True);
+                          mi.model.ForceAnimationPose(mi.Animations[TItem.Tag], 0, True);
                         end;
                     end;
                 end;
@@ -1222,7 +1265,6 @@ var
   TItem: TTreeViewItem;
   Obj: TObject;
   mi: TModelInfo;
-  model: TCastleModel;
   AniTime: Single;
   AniName: String;
 begin
@@ -1233,8 +1275,24 @@ begin
       if Obj is TModelInfo then
         begin
           mi := Obj as TModelInfo;
+          mi.ActiveAnimation := -1;
           if Assigned(mi) then
             begin
+              if Assigned(PickedModel) and Assigned(PickedModel.Model) then
+                begin
+                  if PickedModel.Model <> mi.Model then
+                    begin
+                      PickedModel.Model.ResetAnimationState(Nil);
+                    end
+                  else
+                    begin
+//                      mi.Model.ResetAnimationState(Nil);
+                    end;
+
+                  PickedModel := mi;
+                end
+              else
+                PickedModel := mi;
               {
               if not Assigned(mi.model) then
                 begin
@@ -1249,14 +1307,15 @@ begin
                 Caption := APPNAME + ': ' + mi.Name + ' (ReportMemoryLeaksOnShutdown)'
               else
                 Caption := APPNAME + ': ' + mi.Name;
-              model := CastleApp.CloneModel(mi.model);
-              if Assigned(model) then
+              if Assigned(mi.model) then
                 begin
+                  CastleApp.SwitchModel(mi.model);
                   if TItem.Tag <> -1 then
                     begin
+                      mi.ActiveAnimation := TItem.Tag;
                       AniName := mi.Animations[TItem.Tag];
                       AniTime := mi.Model.AnimationDuration(AniName) / 2;
-                      model.ForceAnimationPose(AniName, AniTime, True);
+                      mi.model.ForceAnimationPose(AniName, AniTime, True);
                     end;
                 end;
             //  ResetZoomAndPan;
@@ -1264,6 +1323,92 @@ begin
         end;
     end;
 end;
+
+procedure TForm1.btnPlayClick(Sender: TObject);
+var
+  model: TCastleModel;
+  AniName: String;
+//  TimeSensor: TTimeSensorNode;
+begin
+  if Assigned(PickedModel) then
+    begin
+      model := PickedModel.model;
+      if Assigned(model) then
+        begin
+          if (PickedModel.AnimationCount > 0) and (PickedModel.ActiveAnimation >=0) then
+            begin
+              AniName := PickedModel.Animations[PickedModel.ActiveAnimation];
+//              AniTime := mi.Model.AnimationDuration(AniName) / 2;
+              model.ResetAnimationState;
+//              TimeSensor := model.AnimationTimeSensor(AniName);
+//              TimeSensor.EventElapsedTime.AddNotification(ReceivedElapsedTime);
+              CastleApp.Frame := 0;
+              if not model.PlayAnimation(AniName, True, True) then
+                WriteLnLog('PlayAnimation returned false');
+
+            end;
+        end;
+    end;
+end;
+
+procedure TForm1.btnPauseClick(Sender: TObject);
+var
+  model: TCastleModel;
+//  AniName: String;
+begin
+  if Assigned(PickedModel) then
+    begin
+      model := PickedModel.model;
+      if Assigned(model) then
+        begin
+          if (PickedModel.AnimationCount > 0) and (PickedModel.ActiveAnimation >=0) then
+            begin
+//              AniName := PickedModel.Animations[PickedModel.ActiveAnimation];
+              model.StopAnimation;
+            end;
+        end;
+    end;
+end;
+
+procedure TForm1.ReceivedElapsedTime(const Event: TX3DEvent; const Value: TX3DField; const Time: TX3DTime);
+var
+  Val: Double;
+begin
+  Val := (Value as TSFTime).Value;
+//  if Val >= AnimStop then
+    begin
+//      AnimNode.Stop;
+      WriteLnLog('At ' + IntToStr(CastleApp.Frame) + ' ReceivedElapsedTime - ' + FloatToStr(Val));
+    end;
+end;
+
+procedure TForm1.ManualAnalyse;
+begin
+  if Assigned(PickedModel) and Assigned(PickedModel.model) then
+    begin
+      Analyse(PickedModel, 4, -1, 0);
+    end;
+
+end;
+
+function TForm1.Analyse(const mi: TModelInfo; const Rotations, AniIndex: Integer;
+      const AniTime: Single): Boolean;
+var
+  frame: TFrameExport;
+  SAP: TSizeAndPan;
+begin
+  Result := False;
+  if Assigned(CastleApp) then
+    begin
+      frame := TFrameExport.Create(Self, 256, 256);
+      SAP := frame.AnalyseModel(mi.Model, Rotations, AniIndex, AniTime);
+      WriteLnLog('SAP = ' + FloatToStr(SAP.Size) + ' (' + FloatToStr(SAP.Pan.X) + ', ' + FloatToStr(SAP.Pan.Y) + ')');
+      frame.Clear;
+      FreeAndNil(frame);
+      Result := True;
+    end;
+end;
+
 
 end.
 

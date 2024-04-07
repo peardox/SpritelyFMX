@@ -15,9 +15,14 @@ uses
   SphericalCamera,
   CastleImages,
   CastleApp,
-  SpritelyTypes;
+  Sprite3DTypes;
 
 type
+  TMinMaxSize = record
+    Min: TVector3;
+    Max: TVector3;
+    Size: TVector3;
+  end;
 
   TSizeAndPan = record
     Size: Single;
@@ -37,21 +42,25 @@ type
     fTransparent: Boolean;
     fImageBuffer: TCastleImage;
     function FitViewToModel(const Model: TCastleModel): Single;
+    function Analyse(const AModel: TCastleModel): TMinMaxSize;
   public
     procedure CreateViewport;
     constructor Create(AOwner: TComponent); overload; override;
     constructor Create(AOwner: TComponent; const AWidth: Integer; const AHeight: Integer); reintroduce; overload;
     destructor Destroy; override;
     procedure Clear;
-    procedure GrabFromCastleApp(ACastleApp: TCastleApp);
-    procedure ThumbFromCastleApp(ACastleApp: TCastleApp; AModel: TCastleModel; const AniIndex: Integer = -1; const AniTime: Single = 0);
+    procedure GrabFromCastleApp(const ACastleApp: TCastleApp); overload;
+    procedure GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan); overload;
+    procedure GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan; const AModel: TCastleModel); overload;
+    procedure ThumbFromCastleApp(const ACastleApp: TCastleApp; const AModel: TCastleModel; const AniIndex: Integer = -1; const AniTime: Single = 0);
     procedure CloneModel(const AModel: TCastleModel; const AniIndex: Integer = -1; const AniTime: Single = 0);
-    function Grab(AContainer: TCastleContainer; APresetSize: TSizeAndPan; const ShowInfo: Boolean = False): TSizeAndPan;
+    function Grab(AContainer: TCastleContainer; AModel: TCastleModel; APresetSize: TSizeAndPan; const ShowInfo: Boolean = False): TSizeAndPan;
     procedure Save(const AFilename: String);
     property Azimuth: Single read fAzimuth write fAzimuth;
     property Inclination: Single read fInclination write fInclination;
     property Transparent: Boolean read fTransparent write fTransparent;
     property Image: TCastleImage read fImageBuffer write fImageBuffer;
+    function AnalyseModel(AModel: TCastleModel; const Rotations: Integer;  const AniIndex: Integer = -1; const AniTime: Single = 0): TSizeAndPan;
   end;
 
 implementation
@@ -167,16 +176,26 @@ begin
 end;
 
 
-procedure TFrameExport.GrabFromCastleApp(ACastleApp: TCastleApp);
+procedure TFrameExport.GrabFromCastleApp(const ACastleApp: TCastleApp);
+begin
+  GrabFromCastleApp(ACastleApp, Default(TSizeAndPan));
+end;
+
+procedure TFrameExport.GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan);
+begin
+  GrabFromCastleApp(ACastleApp, Default(TSizeAndPan), fStage);
+end;
+
+procedure TFrameExport.GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan; const AModel: TCastleModel);
 begin
   fAzimuth := ACastleApp.Azimuth;
   fInclination := ACastleApp.Inclination;
   if Assigned(ACastleApp.SelectedModel) then
     CloneModel(ACastleApp.SelectedModel);
-  Grab(ACastleApp.Container, Default(TSizeAndPan));
+  Grab(ACastleApp.Container, AModel, ASizeAndPan);
 end;
 
-procedure TFrameExport.ThumbFromCastleApp(ACastleApp: TCastleApp; AModel: TCastleModel; const AniIndex: Integer = -1; const AniTime: Single = 0);
+procedure TFrameExport.ThumbFromCastleApp(const ACastleApp: TCastleApp; const AModel: TCastleModel; const AniIndex: Integer = -1; const AniTime: Single = 0);
 begin
   fAzimuth := 0.785398185253143;
   fInclination := -0.615088999271393;
@@ -190,10 +209,47 @@ begin
   else
     Grab(ACastleApp.Container, Default(TSizeAndPan), True);
   }
-    Grab(ACastleApp.Container, Default(TSizeAndPan));
+    Grab(ACastleApp.Container, fStage, Default(TSizeAndPan));
 end;
 
-function TFrameExport.Grab(AContainer: TCastleContainer; APresetSize: TSizeAndPan; const ShowInfo: Boolean = False): TSizeAndPan;
+function TFrameExport.AnalyseModel(AModel: TCastleModel; const Rotations: Integer;  const AniIndex: Integer = -1; const AniTime: Single = 0): TSizeAndPan;
+var
+  SP: TMinMaxSize;
+  I: Integer;
+  res: TMinMaxSize;
+begin
+  fAzimuth := 0.785398185253143;
+  fInclination := -0.615088999271393;
+  if Assigned(AModel) then
+    CloneModel(AModel, AniIndex, AniTime);
+
+  for I := 0 to Rotations - 1 do
+    begin
+      fAzimuth := WrapRot(0.785398185253143 + (((2*PI) / Rotations) * I));
+      SP := Analyse(AModel);
+      if I = 0 then
+        Res := SP
+      else
+        begin
+          Res.Min := Vector3(Min(Res.Min.X, SP.Min.X),
+                             Min(Res.Min.Y, SP.Min.Y),
+                             Min(Res.Min.Z, SP.Min.Z));
+          Res.Max := Vector3(Min(Res.Max.X, SP.Max.X),
+                             Min(Res.Max.Y, SP.Max.Y),
+                             Min(Res.Max.Z, SP.Max.Z));
+        end;
+      WriteLnLog('SP[' + IntToStr(I) + '] = ' + SP.Min.ToString + ' : ' + SP.Max.ToString);
+    end;
+    Res.Size := Vector3(Res.Max.X - Res.Min.X,
+                        Res.Max.Y - Res.Min.Y,
+                        Res.Max.Z - Res.Min.Z);
+    WriteLnLog('Res = ' + Res.Min.ToString + ' : ' + Res.Max.ToString + ' : ' + Res.Size.ToString);
+
+    Result.Size := Max(Res.Size.X, Res.Size.Y);
+    Result.Pan := Vector2((Res.Size.X / 2) + Res.Min.X, (Res.Size.Y / 2) + Res.Min.Y);
+end;
+
+function TFrameExport.Grab(AContainer: TCastleContainer; AModel: TCastleModel; APresetSize: TSizeAndPan; const ShowInfo: Boolean = False): TSizeAndPan;
 var
   Image: TDrawableImage;
   RGBA: TRGBAlphaImage;
@@ -271,6 +327,29 @@ begin
     Result := Res;
   end;
 
+end;
+
+function TFrameExport.Analyse(const AModel: TCastleModel): TMinMaxSize;
+var
+  ViewportRect: TRectangle;
+  E: TExtents;
+  S: Single;
+  P: TVector2;
+begin
+  Result := Default(TMinMaxSize);
+
+  fCamera.ProjectionType := ptOrthographic;
+
+  fCamera.ViewFromSphere(1, fAzimuth, fInclination);
+  WriteLnLog('Azi = ' + FloatToStr(fAzimuth));
+
+  E := fViewport.FrameCalcAngles(AModel); // fStage);
+  S := Max(E.Size.X, E.Size.Y);
+  P := Vector2((E.Size.X / 2) + E.Min.X, (E.Size.Y / 2) + E.Min.Y);
+
+  Result.Min := E.Min;
+  Result.Max := E.Max;
+  Result.Size := E.Size;;
 end;
 
 procedure TFrameExport.Save(const AFilename: String);

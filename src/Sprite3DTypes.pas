@@ -1,4 +1,4 @@
-unit SpritelyTypes;
+unit Sprite3DTypes;
 
 interface
 uses
@@ -9,6 +9,7 @@ type
   TPDXMessageEvent = procedure (Sender: TObject; const Msg: String) of object;
   TPDXRotationEvent = procedure (Sender: TObject; const Rotation: Single) of object;
   TOptionLanguage = ( enUS, ptBR, frFR, itIT, deDE, esES, ruRU, jaJP, koKR, zhCN, zhTW);
+  TAutoRotate = (None, World, Model, All);
 
   { TExtents }
   TExtents = record

@@ -1,9 +1,9 @@
-unit SpritelyCheckTextures;
+unit Sprite3DCheckTextures;
 
 // {$define logit}
 interface
 
-uses System.Generics.Collections, SpritelyTypes, CastleModel;
+uses System.Generics.Collections, Sprite3DTypes, CastleModel;
 
 type
   TFileDirectory = class

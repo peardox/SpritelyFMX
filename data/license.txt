@@ -1,0 +1,30 @@
+michalis — 08/06/2021 13:02
+This memory usage is not exposed anywhere. 
+
+Note that it is only a very very gross approximation, it doesn't take into account lots of things
+that are allocated for glTF (and X3D nodes underneath). It's only an approximation, to basically 
+warn you --- some glTF skinned animations indeed eat a lot of memory in CGE now, due to the way we
+handle skinned animations.
+
+( Why? We "precalculate" skinned animations at loading. Which eats memory, eats loading time, and
+doesn't allow to redesign animation at runtime. The advantage is that it doesn't require doing 
+skinned animaton on GPU, so it was simpler to implement and works basically everywhere. It will 
+be absolutely definitely improved at some point -- everyone else uses now GPU skinning which avoids 
+these problems. Note that support for glTF skinned animations on ancient GPUs (without shaders) may 
+then get deprecated and eventually disappear. I will warn about it in news, but basically we cannot 
+maintain 2 non-trvial implementations of skinned animation in the long-term, so once we jump to GPU 
+skinned animation -> we will want to rely on it. )
+
+Getting back to the topic: while the information is not exposed, you can calculate it yourself. 
+Use TX3DNode.EnumerateNodes to find all instances of TCoordinateInterpolatorNode nodes. 
+For each TCoordinateInterpolatorNode, add 
+MemoryTaken += MyInterpolator.FdKeyValue.Items.Capacity * SizeOf(TVector3); . 
+You can use node names (MyInterpolator.X3DName) to split this information  per-animation.
+========================
+@michalis Another Q I've asked before :(...
+How do I get at the list of interpolations used to animate some chosen animation? In Blender this would 
+be the Animation Timeline
+The thing is that some Take 001 animations have lists using frame numbers but if the last animation is 
+quoted as a starting frame and the end frame number is omitted then there's some ambiguity as to timing 
+that could potentially affect everything else in that animation.
+

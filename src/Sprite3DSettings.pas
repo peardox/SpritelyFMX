@@ -1,4 +1,4 @@
-unit SpritelySettings;
+unit Sprite3DSettings;
 
 {$define badtex}
 
@@ -62,6 +62,7 @@ type
     AppData: String;
     ThumbData: String;
     ThumbType: String;
+    StyleData: String;
     AppVersion: String;
     LoadFromDir: String;
     LastModel: String;
@@ -94,9 +95,9 @@ var
   SystemSettings: TPDXSettings = Nil;
 
 const
-  APPNAME: String = 'Spritely';
+  APPNAME: String = 'Sprite3d';
   APPVER: String = '0.0.1';
-  APIBASE: String = 'https://spritely.co.uk/';
+  APIBASE: String = 'https://sprite3d.com/';
 
 implementation
 
@@ -114,7 +115,7 @@ end;
 constructor TPDXSettings.Create;
 begin
   inherited;
-  LogFileName := 'Spritely.log';
+  LogFileName := 'Sprite3d.log';
   InitializeLog;
   {$ifdef badtex}
   ApplicationProperties.OnWarning.Add({$ifdef FPC}@{$endif}OnWarningRaiseException);
@@ -133,6 +134,7 @@ begin
   AppHome := IncludeTrailingPathDelimiter(AppHome);
   AppData := AppHome;
   ThumbData := IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(AppHome)+'Thumbs');
+  StyleData := IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(AppHome)+'Styles');
   ThumbType := '.png';
   AppVersion := APPVER;
   {$IF DEFINED(MSWINDOWS)}
@@ -422,8 +424,8 @@ end;
 {$ifdef badtex}
 procedure TPDXSettings.OnWarningRaiseException(const Category, S: string);
 begin
-  raise Exception.CreateFmt('Cat: %s Msg: %s',
-    [Category, S]);
+  WriteLnLog('Cat: %s Msg: %s', [Category, S]);
+//  raise Exception.CreateFmt('Cat: %s Msg: %s', [Category, S]);
 end;
 {$endif}
 

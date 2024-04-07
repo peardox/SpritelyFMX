@@ -1,4 +1,4 @@
-program Spritely;
+program Sprite3D;
 
 
 
@@ -8,15 +8,13 @@ uses
   FMX.Forms,
   MainGui in 'src\MainGui.pas' {Form1},
   CastleApp in 'src\CastleApp.pas',
-  SpritelySettings in 'src\SpritelySettings.pas',
-  SpritelyTypes in 'src\SpritelyTypes.pas',
+  Sprite3DSettings in 'src\Sprite3DSettings.pas',
+  Sprite3DTypes in 'src\Sprite3DTypes.pas',
   CastleModel in 'src\CastleModel.pas',
   CastleHelpers in 'src\CastleHelpers.pas',
-  SpritelyControls in 'src\SpritelyControls.pas',
-  SpritelyDebug in 'src\SpritelyDebug.pas',
+  Sprite3DDebug in 'src\Sprite3DDebug.pas',
   SphericalCamera in 'src\SphericalCamera.pas',
-  SpritelyCheckTextures in 'src\SpritelyCheckTextures.pas',
-  SpritelyAxisGrid in 'src\SpritelyAxisGrid.pas',
+  Sprite3DCheckTextures in 'src\Sprite3DCheckTextures.pas',
   FrameToImage in 'src\FrameToImage.pas',
   LoadingForm in 'src\LoadingForm.pas' {frmLoadingDialog},
   InfoForm in 'src\InfoForm.pas',

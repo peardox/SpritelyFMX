@@ -7,8 +7,8 @@ interface
 uses System.SysUtils, System.Types, System.UITypes, System.Classes, System.Generics.Collections,
   CastleDebugTransform, CastleColors,
   CastleScene, CastleQuaternions, CastleVectors,
-  SpritelyTypes,
-  SpritelyDebug;
+  Sprite3DTypes,
+  Sprite3DDebug;
 
 type
   TModelPack = class;
@@ -87,10 +87,14 @@ type
     fAnimationCount: Integer;
     fAnimations: TList<String>;
     fAnimation: TAnimationInfo;
+    fActiveAnimation: Integer;
+    function GetHasAnimations: Boolean;
+
   public
     constructor Create;
     destructor Destroy; override;
     procedure SetInfo(const AModel: TCastleModel);
+    property HasAnimations: Boolean read GetHasAnimations;
     property IsValid: Boolean read fIsValid write fIsValid;
     property Model: TCastleModel read fModel write fModel;
     property ModelFile: String read fFile write fFile;
@@ -104,6 +108,7 @@ type
     property AnimationCount: Integer read fAnimationCount write fAnimationCount;
     property Animations: TList<String> read fAnimations write fAnimations;
     property Animation: TAnimationInfo read fAnimation write fAnimation;
+    property ActiveAnimation: Integer read fActiveAnimation write fActiveAnimation;
   end;
 
   TPDXModelEvent = procedure (Sender: TObject; const AModel: TCastleModel) of object;
@@ -136,7 +141,7 @@ uses
   CastleApp,
   System.Hash,
   CastleLog,
-  SpritelySettings,
+  Sprite3DSettings,
   CastleBoxes,
   FrameToImage,
   System.IOUtils,
@@ -192,7 +197,7 @@ function TCastleModel.AlignTo(const OtherModel: TCastleModel;
 var
   newCenter, otherCenter, otherLoc, newSize, otherSize: TVector3;
 begin
-  if BoundingBox.IsEmptyOrZero then
+  if LocalBoundingBox.IsEmptyOrZero then
     begin
       newSize := Vector3(0, 0, 0);
       newCenter := Vector3(0, 0, 0);
@@ -338,11 +343,20 @@ begin
 end;
 
 procedure TCastleModel.ClearAndFreeItems;
+var
+  I: Integer;
 begin
-  while Count <> 0 do
+  for I := Count - 1 downto 0 do
     begin
-      FreeAndNil(Items[0]);
+      if not (TCastleModel(Items[I]).fChildOf is TModelPack) then
+        begin
+          WriteLnLog('Freeing NON TModelPack model');
+          FreeAndNil(Items[I])
+        end
+      else
+        WriteLnLog('Not freeing TModelPack model');
     end;
+  Clear;
 end;
 
 constructor TCastleModel.Create(AOwner: TComponent);
@@ -666,6 +680,7 @@ begin
   fAnimation := Nil;
   fAnimations := Nil;
   fIsValid := True;
+  fActiveAnimation := -1;
   fModel := AModel;
   fFile := CopyString(AModel.Url);
   fName := CopyString(TPath.GetFileName(AModel.Url));
@@ -680,10 +695,12 @@ begin
   fAnimationCount := AModel.AnimationsList.Count;
   if fAnimationCount > 0 then
     begin
+      WriteLnLog(fName);
       fAnimations := TList<String>.Create;
       for I := 0 to fAnimationCount - 1 do
         begin
           fAnimations.Add(CopyString(AModel.AnimationsList[I]));
+          WriteLnLog(IntToStr(I) + ', "' + AModel.AnimationsList[I] + '", ' + FloatToStr(AModel.AnimationDuration(Amodel.AnimationsList[I])));;
         end;
     end;
 
@@ -719,6 +736,11 @@ begin
       FreeAndNil(fAnimations);
     end;
   inherited;
+end;
+
+function TModelInfo.GetHasAnimations: Boolean;
+begin
+  Result := fAnimationCount >= 0;
 end;
 
 { TAnimationInfo }

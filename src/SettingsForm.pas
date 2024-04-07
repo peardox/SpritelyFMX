@@ -38,6 +38,7 @@ type
     procedure BtnOKClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure swConstantSpeedClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
     procedure FormReset;
@@ -49,7 +50,7 @@ type
 
 implementation
 
-uses Math, SpritelySettings;
+uses Math, Sprite3DSettings;
 
 {$R *.fmx}
 
@@ -125,5 +126,10 @@ begin
   EnableCorrectSwitch;
 end;
 
+
+procedure TfrmSettingsDialog.FormShow(Sender: TObject);
+begin
+  Application.ProcessMessages;
+end;
 
 end.

@@ -17,7 +17,7 @@ type
     fName: String;
     fAzimuth: Single;
     fInclination: Single;
-	fStretch: Single;
+	  fStretch: Single;
   public
     constructor Create(const AName: String; const AInclination: Single; AAzimuth: Single; AStretch: Single);
     destructor Destroy; override;
@@ -31,6 +31,7 @@ type
   TPreloadOption = (NeverPreload, PreloadOnDemand, AlwaysPreload);
 
   TProjectionArray = TArray<TProjection>;
+  TMRUList = TArray<String>;
 
   TAnimationConfig = record
     FramesPerSecond: Integer;
@@ -60,6 +61,7 @@ type
   TPDXSettings = class
     AppHome: String;
     AppData: String;
+    AppDocs: String;
     ThumbData: String;
     ThumbType: String;
     StyleData: String;
@@ -71,12 +73,17 @@ type
     Projections: TProjectionArray;
     UpdateRequired: Boolean;
     Config: TConfig;
+    MRU: TMRUList;
+    MRULen: Integer;
     procedure Load;
     procedure Save;
     {$ifdef badtex}
     procedure OnWarningRaiseException(const Category, S: string);
     {$endif}
   private
+    fOnMRU: TNotifyEvent;
+    procedure SetOnMRU(const AEvent: TNotifyEvent);
+    procedure DoOnMRU(Sender: TObject);
     procedure CreateProjections;
     procedure SetDefaults;
     procedure SetDefaultConfig;
@@ -87,6 +94,8 @@ type
   public
     constructor Create; virtual;
     destructor Destroy; override;
+    procedure MRUAdd(const AFilename: String);
+    property OnMRU: TNotifyEvent read fOnMRU write SetOnMRU;
   end;
 
 function CopyString(const AValue: String): String;
@@ -115,8 +124,6 @@ end;
 constructor TPDXSettings.Create;
 begin
   inherited;
-  LogFileName := 'Sprite3d.log';
-  InitializeLog;
   {$ifdef badtex}
   ApplicationProperties.OnWarning.Add({$ifdef FPC}@{$endif}OnWarningRaiseException);
   {$endif}
@@ -133,6 +140,7 @@ begin
 
   AppHome := IncludeTrailingPathDelimiter(AppHome);
   AppData := AppHome;
+  AppDocs := IncludeTrailingPathDelimiter(TPath.GetDocumentsPath) + APPNAME;
   ThumbData := IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(AppHome)+'Thumbs');
   StyleData := IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(AppHome)+'Styles');
   ThumbType := '.png';
@@ -140,7 +148,6 @@ begin
   {$IF DEFINED(MSWINDOWS)}
   SearchDir := GetCurrentDir() + '\data';
   LoadFromDir := GetCurrentDir() + '\data';
-  SaveToDir := GetCurrentDir() + '\data';
   {$ENDIF}
   {$IF DEFINED(MACOS)}
   SearchDir := AppHome + '/data';
@@ -155,16 +162,27 @@ begin
   {$ENDIF}
   UpdateRequired := True;
   LastModel := '';
+  MRULen := 10;
 
   if not DirectoryExists(AppHome) then
     begin
       ForceDirectories(AppHome);
     end;
 
+  if not DirectoryExists(AppDocs) then
+    begin
+      ForceDirectories(AppDocs);
+    end;
+
+  SaveToDir := AppDocs;
+
   if not DirectoryExists(ThumbData) then
     begin
       ForceDirectories(ThumbData);
     end;
+
+  LogFileName := IncludeTrailingPathDelimiter(AppHome) + APPNAME + '.log';
+  InitializeLog;
 
   if FileExists(IncludeTrailingPathDelimiter(AppHome) + 'Settings.json') then
     begin
@@ -199,6 +217,11 @@ end;
 procedure TPDXSettings.SetDefaults;
 begin
   CreateProjections;
+end;
+
+procedure TPDXSettings.SetOnMRU(const AEvent: TNotifyEvent);
+begin
+  fOnMRU := AEvent;
 end;
 
 procedure TPDXSettings.ExtractAnimationConfig(AValue: TJSONObject);
@@ -294,6 +317,7 @@ begin
     try
       jobj.TryGetValue('AppHome', AppHome);
       jobj.TryGetValue('AppData', AppData);
+      jobj.TryGetValue('AppDocs', AppDocs);
       jobj.TryGetValue('ThumbData', ThumbData);
       jobj.TryGetValue('ThumbType', ThumbType);
       jobj.TryGetValue('AppVersion', AppVersion);
@@ -301,6 +325,7 @@ begin
       jobj.TryGetValue('SaveToDir', SaveToDir);
       jobj.TryGetValue('SearchDir', SearchDir);
       jobj.TryGetValue('LastModel', LastModel);
+      jobj.TryGetValue('MRULen', MRULen);
       if jobj.TryGetValue('Config', AConfig) then
         begin
           ExtractConfig(AConfig);
@@ -324,6 +349,24 @@ begin
                   except
                    on E : Exception do
                      Raise Exception.Create('Load Projection Settings - Exception : Class = ' +
+                      E.ClassName + ', Message = ' + E.Message);
+                  end;
+                end;
+            end;
+          end;
+
+      if(jobj.TryGetValue('MRU', jarr)) then
+        begin
+          if jarr.Count > 0 then
+            begin
+              SetLength(MRU, jarr.Count);
+              for I := 0 to jarr.Count - 1 do
+                begin
+                  try
+                    MRU[I] := jarr[I].GetValue<String>;
+                  except
+                   on E : Exception do
+                     Raise Exception.Create('Load MRU Settings - Exception : Class = ' +
                       E.ClassName + ', Message = ' + E.Message);
                   end;
                 end;
@@ -360,6 +403,42 @@ begin
   finally
     FreeAndNil(jobj);
   end;
+end;
+
+{ A very poor MRU List }
+procedure TPDXSettings.MRUAdd(const AFilename: String);
+var
+  I, J: Integer;
+begin
+  { Check the file isn't already in the MRU list }
+  for I := 0 to Length(MRU) - 1 do
+    begin
+      if MRU[I] = AFilename then
+        begin
+          { If file is already in list delete it so it will become #1 }
+          for J := I to Length(MRU) - 2 do { -2 as we're copying the one above it }
+            begin
+              MRU[J] := CopyString(MRU[J+1]);
+            end;
+          { Remove the last item and break out }
+          SetLength(MRU, Length(MRU) - 1);
+          Break;
+        end;
+    end;
+
+  { Increase size of MRU List if not already at Max }
+  if Length(MRU) < MRULen then
+    SetLength(MRU, Length(MRU) + 1);
+
+  { Move everything up one }
+  for I := Length(MRU) - 1 downto 1 do
+    MRU[I] := CopyString(MRU[I - 1]);
+
+  { Add file to top of list }
+  MRU[0] := AFilename;
+
+  { Perform Callback }
+  DoOnMRU(Self);
 end;
 
 procedure TPDXSettings.Save;
@@ -421,6 +500,12 @@ begin
   inherited;
 end;
 
+procedure TPDXSettings.DoOnMRU(Sender: TObject);
+begin
+  if Assigned(fOnMRU) then
+    fOnMRU(Sender);
+end;
+
 {$ifdef badtex}
 procedure TPDXSettings.OnWarningRaiseException(const Category, S: string);
 begin
@@ -436,7 +521,7 @@ begin
   fName := AName;
   fInclination := AInclination;
   fAzimuth := AAzimuth;
-  fStretch := AStretch; 
+  fStretch := AStretch;
 end;
 
 destructor TProjection.Destroy;

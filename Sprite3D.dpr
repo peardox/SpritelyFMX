@@ -19,7 +19,8 @@ uses
   LoadingForm in 'src\LoadingForm.pas' {frmLoadingDialog},
   InfoForm in 'src\InfoForm.pas',
   ModelManager in 'src\ModelManager.pas',
-  SettingsForm in 'src\SettingsForm.pas' {frmSettingsDialog};
+  SettingsForm in 'src\SettingsForm.pas' {frmSettingsDialog},
+  Sprite3DCollection in 'src\Sprite3DCollection.pas';
 
 {$R *.res}
 

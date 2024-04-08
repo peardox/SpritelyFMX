@@ -92,6 +92,7 @@ type
     TrackBar1: TTrackBar;
     Label2: TLabel;
     Label3: TLabel;
+    mnuMRU: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure LayoutLeftResize(Sender: TObject);
     procedure SwitchView;
@@ -140,6 +141,7 @@ type
     CastleApp: TCastleApp;
     OutputSize: TUnitConfig;
     ManualLoadNode: TTreeViewItem;
+    procedure UpdateMRU(Sender: TObject);
 //    TheFileList: TObjectList<TFileDirectory>;
     procedure NewModel(Sender: TObject; const AModel: TCastleModel);
     procedure LogTicker(Sender: TObject; const Msg: String);
@@ -166,6 +168,7 @@ type
     function Analyse(const mi: TModelInfo; const Rotations, AniIndex: Integer;
       const AniTime: Single): Boolean;
     procedure ManualAnalyse;
+    procedure mnuMRUItemClick(Sender: TObject);
   public
     { Public declarations }
   end;
@@ -318,6 +321,8 @@ begin
   mm := TModelManager.Create(Self);
   ExeParam := ParamStr(1);
 
+//  mnuMRU.ShortCut := TextToShortCut('&R');
+
   PickedModel := Nil;
   OutputSize := UnitConfig(256, 256);
   CastleControl := TCastleControl.Create(View3D);
@@ -393,6 +398,11 @@ begin
 //  TheFileList := TObjectList<TFileDirectory>.Create;
 
   LayoutViewResize(Self);
+
+  SystemSettings.OnMRU := UpdateMRU;
+
+  UpdateMRU(Self);
+
 end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
@@ -496,6 +506,53 @@ begin
     StringGrid1.EndUpdate;
   end;
 
+end;
+
+procedure TForm1.mnuMRUItemClick(Sender: TObject);
+var
+  Idx: Integer;
+begin
+  { Only do anything if called by a TMenuItem }
+  if not (Sender is TMenuItem) then
+    Exit;
+  { Get the Tag value for index into MRU List }
+  Idx := TMenuItem(Sender).Tag;
+  { Range Check it }
+  if (Idx >= 0) and (Idx < Length(SystemSettings.MRU)) then
+    begin
+      { Open the model and update MRU List etc }
+      ManualLoad(SystemSettings.MRU[Idx]);
+      SystemSettings.LastModel := SystemSettings.MRU[Idx];
+      SystemSettings.MRUAdd(SystemSettings.MRU[Idx]);
+
+    end;
+end;
+
+procedure TForm1.UpdateMRU(Sender: TObject);
+var
+  mnu: TMenuItem;
+  I: Integer;
+begin
+  { Clear out MRU menu }
+  mnuMRU.Clear;
+  { Loop over MRU List }
+  for I := 0 to Length(SystemSettings.MRU) - 1 do
+    begin
+      { Create new menu item to add }
+      mnu := TMenuItem.Create(Self);
+      if I < 9 then
+        { Only shortbut 1-9 }
+        mnu.Text := Format('&%d %s', [I+1, SystemSettings.MRU[I]])
+      else
+        { Must be clicked }
+        mnu.Text := Format('%d %s', [I+1, SystemSettings.MRU[I]]);
+      { Pass MRU Index in Tag }
+      mnu.Tag := I;
+      { Set the Click Event }
+      mnu.OnClick := mnuMRUItemClick;
+      { Add this item to the parent menu }
+      mnuMRU.AddObject(mnu);
+    end;
 end;
 
 procedure TForm1.UpdateCamInfo(Sender: TObject);
@@ -863,6 +920,7 @@ begin
       ManualLoad(OpenDialog1.FileName);
 //      CastleApp.AddModel(OpenDialog1.FileName);
       SystemSettings.LastModel := OpenDialog1.FileName;
+      SystemSettings.MRUAdd(OpenDialog1.FileName);
     end;
 end;
 

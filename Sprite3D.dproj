@@ -312,6 +312,7 @@
         <DCCReference Include="src\SettingsForm.pas">
             <Form>frmSettingsDialog</Form>
         </DCCReference>
+        <DCCReference Include="src\Sprite3DCollection.pas"/>
         <None Include="Styles\MaterialOxfordBlue_Linux.style"/>
         <None Include="Styles\MaterialOxfordBlue_Win.style"/>
         <None Include="Styles\Win10Modern.Style"/>
@@ -377,6 +378,12 @@
                     </Platform>
                 </DeployFile>
                 <DeployFile LocalName="README.md" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win64">
+                        <RemoteDir>.\</RemoteDir>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="README.md" Configuration="Release" Class="ProjectFile">
                     <Platform Name="Win64">
                         <RemoteDir>.\</RemoteDir>
                         <Overwrite>true</Overwrite>
@@ -494,12 +501,6 @@
                 <DeployFile LocalName="Win64\Debug\Sprite3D.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win64">
                         <RemoteName>Sprite3D.exe</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="Win64\Debug\Sprite3D.rsm" Configuration="Debug" Class="DebugSymbols">
-                    <Platform Name="Win64">
-                        <RemoteName>Sprite3D.rsm</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

@@ -126,7 +126,7 @@ object Form1: TForm1
       Text = 'File'
       object mnuLoad: TMenuItem
         Locked = True
-        Text = 'Load'
+        Text = 'Open'
         OnClick = mnuLoadClick
       end
       object mnuClear: TMenuItem
@@ -139,22 +139,22 @@ object Form1: TForm1
         Text = 'Directory'
         object mnuGLTFDir: TMenuItem
           Locked = True
-          Text = 'Scan GLTF Pack(s)'
+          Text = 'Scan &GLTF Pack(s)'
           OnClick = mnuGLTFDirClick
         end
         object mnuOBJDir: TMenuItem
           Locked = True
-          Text = 'Scan OBJ Pack(s)'
+          Text = 'Scan &OBJ Pack(s)'
           OnClick = mnuOBJDirClick
         end
         object mnuDAEDir: TMenuItem
           Locked = True
-          Text = 'Scan DAE Pack(s)'
+          Text = 'Scan &DAE Pack(s)'
           OnClick = mnuDAEDirClick
         end
         object mnuSTLDir: TMenuItem
           Locked = True
-          Text = 'Scan STL Pack(s)'
+          Text = 'Scan &STL Pack(s)'
           OnClick = mnuSTLDirClick
         end
       end
@@ -167,6 +167,10 @@ object Form1: TForm1
         Locked = True
         Text = 'Options'
         OnClick = mnuOptionsClick
+      end
+      object mnuMRU: TMenuItem
+        Locked = True
+        Text = 'Recent Files'
       end
       object mnuExit: TMenuItem
         Locked = True

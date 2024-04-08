@@ -59,6 +59,7 @@ type
     fWaitingToFit: Boolean;
     fAutoRotate: Boolean;
     fAutoRotateAngle: Single;
+    fDefaulModel: String;
     procedure SendMessage(const AMsg: String);
     procedure SetDoExtMessage(const AProc: TPDXMessageEvent);
     procedure SetDoOnModel(const AProc: TPDXModelEvent);
@@ -118,7 +119,7 @@ type
   end;
 
 const
-  DEFAULT_MODEL: String = 'castle-data:/up.glb';
+  DEFAULT_MODEL: String = 'up.glb';
 
 implementation
 
@@ -147,6 +148,7 @@ begin
   fInclination := 0;
   fCamWidth := 0.8;
   fCamHeight := 1;
+  fDefaulModel := IncludeTrailingPathDelimiter(IncludeTrailingPathDelimiter(SystemSettings.AppHome)+'data') + DEFAULT_MODEL;
 end;
 
 procedure TCastleApp.Start;
@@ -181,9 +183,9 @@ begin
         end;
     end;
   { Fallback to Default Model }
-  if UriFileExists(DEFAULT_MODEL) then
+  if UriFileExists(fDefaulModel) then
     begin
-      model := fModels.AddModel(DEFAULT_MODEL);
+      model := fModels.AddModel(fDefaulModel);
       fStage.Add(model);
       fAxis.SetGround(model);
       fGrid.SetGround(model);
@@ -656,7 +658,7 @@ begin
       vertScale := V.Box.View2D.Height / fViewport.Height;
       horizScale := V.Box.View2D.Width / fViewport.Width;
       Scale := Max(horizScale, vertScale);
-      Model.Translation := -Model.GetOriginOffset;
+//      Model.Translation := -Model.GetOriginOffset;
 
       SetZoom(Scale * Zoom);
       fWaitingToFit := False;

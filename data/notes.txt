@@ -28,3 +28,52 @@ The thing is that some Take 001 animations have lists using frame numbers but if
 quoted as a starting frame and the end frame number is omitted then there's some ambiguity as to timing 
 that could potentially affect everything else in that animation.
 
+========================
+michalis — 08/04/2024 17:51
+See how TDetectAffectedFields works in TCastleSceneCore.
+
+It enumerates all ROUTEs that connect TTimeSensorNode (which represents an animation) with an interpolator in TDetectAffectedFields.FindRoutesAndInterpolatorsEnumerate.
+
+It looks at all animations, so it does
+
+if (Route.SourceNode is TTimeSensorNode) and
+TTimeSensorNode(Route.SourceNode).DetectAffectedFields then
+
+
+In your case, if you want to look at specific animation, you would instead just compare 
+
+if (Route.SourceNode is TTimeSensorNode) and
+TTimeSensorNode(Route.SourceNode).X3DName = 
+'my-animation' then
+=========================
+peardox — 07/04/2024 06:26
+@michalis This BB function - like this???
+{ TCastleSceneHelper }
+
+function TCastleSceneHelper.CalculateFrameBoundingBox: TBox3D;
+var
+  ShapeList: TShapeList;
+  Shape: TShape;
+begin
+  Result := TBox3D.Empty;
+  ShapeList := Shapes.TraverseList(true);
+  for Shape in ShapeList do
+    Result.Include(Shape.BoundingBox);
+end;
+
+function TCastleSceneHelper.FrameBoundingBox: TBox3D;
+begin
+    Result := CalculateFrameBoundingBox.Transform(Transform);
+end;
+Basically copies private function from castlescenecore - seems to work
+==================
+michalis — 08/04/2024 11:54
+Your FrameBoundingBox shown above will make the same results as just existing MyScene.BoundingBox. 
+
+If you want to get tighter bbox of animation frames, you'd have disable box collision nodes that surround animated mesh, 
+see https://castle-engine.io/gltf#_collisions_when_your_gltf_mesh_uses_skinned_animation . 
+
+Remember this is never guaranteed to be "as tight as possible" anyway. This is bounding volume. No guarantees it will be 
+as tight as possible.
+
+=====================================

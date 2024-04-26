@@ -39,6 +39,7 @@ type
     fCameraLight: TCastleDirectionalLight;
     fAzimuth: Single;
     fInclination: Single;
+    fOffset: TVector3;
     fTransparent: Boolean;
     fImageBuffer: TCastleImage;
     function FitViewToModel(const Model: TCastleModel): Single;
@@ -49,18 +50,20 @@ type
     constructor Create(AOwner: TComponent; const AWidth: Integer; const AHeight: Integer); reintroduce; overload;
     destructor Destroy; override;
     procedure Clear;
-    procedure GrabFromCastleApp(const ACastleApp: TCastleApp); overload;
-    procedure GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan); overload;
-    procedure GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan; const AModel: TCastleModel); overload;
+    function GrabFromCastleApp(const ACastleApp: TCastleApp): TSizeAndPan; overload;
+    function GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan): TSizeAndPan; overload;
+    function GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan; const AModel: TCastleModel): TSizeAndPan; overload;
+    function GrabFromCastleApp(const ACastleApp: TCastleApp; const AAzimuth: Single; const AInclination: Single; const ASizeAndPan: TSizeAndPan; const AModel: TCastleModel): TSizeAndPan; overload;
     procedure ThumbFromCastleApp(const ACastleApp: TCastleApp; const AModel: TCastleModel; const AniIndex: Integer = -1; const AniTime: Single = 0);
     procedure CloneModel(const AModel: TCastleModel; const AniIndex: Integer = -1; const AniTime: Single = 0);
     function Grab(AContainer: TCastleContainer; AModel: TCastleModel; APresetSize: TSizeAndPan; const ShowInfo: Boolean = False): TSizeAndPan;
+    function AnalyseModel(AModel: TCastleModel; const AAzimuth: Single; const AInclination: Single; const Rotations: Integer;  const AniIndex: Integer = -1; const AniTime: Single = 0): TSizeAndPan;
     procedure Save(const AFilename: String);
     property Azimuth: Single read fAzimuth write fAzimuth;
     property Inclination: Single read fInclination write fInclination;
     property Transparent: Boolean read fTransparent write fTransparent;
     property Image: TCastleImage read fImageBuffer write fImageBuffer;
-    function AnalyseModel(AModel: TCastleModel; const Rotations: Integer;  const AniIndex: Integer = -1; const AniTime: Single = 0): TSizeAndPan;
+    property Offset: TVector3 read fOffset write fOffset;
   end;
 
 implementation
@@ -71,6 +74,7 @@ constructor TFrameExport.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   fTransparent := True;
+  fOffset := Vector3(0,0,0);
 end;
 
 procedure TFrameExport.CloneModel(const AModel: TCastleModel; const AniIndex: Integer = -1; const AniTime: Single = 0);
@@ -84,7 +88,8 @@ begin
   ClonedModel := AModel.Clone(fStage) as TCastleModel;
   ClonedModel.UpdateModel(AModel);
   ClonedModel.Normalize;
-  ClonedModel.Translation := -ClonedModel.GetOriginOffset;
+  if not fOffset.IsZero then
+    ClonedModel.Translation := -ClonedModel.GetOriginOffset;
   if AniIndex >= 0 then
     begin
       AniName := ClonedModel.AnimationsList[AniIndex];
@@ -176,23 +181,46 @@ begin
 end;
 
 
-procedure TFrameExport.GrabFromCastleApp(const ACastleApp: TCastleApp);
+function TFrameExport.GrabFromCastleApp(const ACastleApp: TCastleApp): TSizeAndPan;
 begin
-  GrabFromCastleApp(ACastleApp, Default(TSizeAndPan));
+  Result := GrabFromCastleApp(ACastleApp, Default(TSizeAndPan));
 end;
 
-procedure TFrameExport.GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan);
+function TFrameExport.GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan): TSizeAndPan;
 begin
-  GrabFromCastleApp(ACastleApp, Default(TSizeAndPan), fStage);
+  Result := GrabFromCastleApp(ACastleApp, ASizeAndPan, fStage);
 end;
 
-procedure TFrameExport.GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan; const AModel: TCastleModel);
+function TFrameExport.GrabFromCastleApp(const ACastleApp: TCastleApp; const ASizeAndPan: TSizeAndPan; const AModel: TCastleModel): TSizeAndPan;
+var
+  NewSizeAndPan: TSizeAndPan;
 begin
+  if (ASizeAndPan.Size = 0) and (ASizeAndPan.Pan.IsZero) then
+    NewSizeAndPan := Default(TSizeAndPan)
+  else
+    NewSizeAndPan := ASizeAndPan;
   fAzimuth := ACastleApp.Azimuth;
   fInclination := ACastleApp.Inclination;
   if Assigned(ACastleApp.SelectedModel) then
     CloneModel(ACastleApp.SelectedModel);
-  Grab(ACastleApp.Container, AModel, ASizeAndPan);
+  Result := Grab(ACastleApp.Container, AModel, NewSizeAndPan);
+//  NewSizeAndPan;
+end;
+
+function TFrameExport.GrabFromCastleApp(const ACastleApp: TCastleApp; const AAzimuth: Single; const AInclination: Single; const ASizeAndPan: TSizeAndPan; const AModel: TCastleModel): TSizeAndPan;
+var
+  NewSizeAndPan: TSizeAndPan;
+begin
+  if (ASizeAndPan.Size = 0) and (ASizeAndPan.Pan.IsZero) then
+    NewSizeAndPan := Default(TSizeAndPan)
+  else
+    NewSizeAndPan := ASizeAndPan;
+  fAzimuth := AAzimuth;
+  fInclination := AInclination;
+  if Assigned(ACastleApp.SelectedModel) then
+    CloneModel(ACastleApp.SelectedModel);
+  Result := Grab(ACastleApp.Container, AModel, NewSizeAndPan);
+//  NewSizeAndPan;
 end;
 
 procedure TFrameExport.ThumbFromCastleApp(const ACastleApp: TCastleApp; const AModel: TCastleModel; const AniIndex: Integer = -1; const AniTime: Single = 0);
@@ -212,20 +240,20 @@ begin
     Grab(ACastleApp.Container, fStage, Default(TSizeAndPan));
 end;
 
-function TFrameExport.AnalyseModel(AModel: TCastleModel; const Rotations: Integer;  const AniIndex: Integer = -1; const AniTime: Single = 0): TSizeAndPan;
+function TFrameExport.AnalyseModel(AModel: TCastleModel; const AAzimuth: Single; const AInclination: Single; const Rotations: Integer;  const AniIndex: Integer = -1; const AniTime: Single = 0): TSizeAndPan;
 var
   SP: TMinMaxSize;
   I: Integer;
   res: TMinMaxSize;
 begin
-  fAzimuth := 0.785398185253143;
-  fInclination := -0.615088999271393;
+  fAzimuth := AAzimuth;
+  fInclination := AInclination;
   if Assigned(AModel) then
     CloneModel(AModel, AniIndex, AniTime);
 
   for I := 0 to Rotations - 1 do
     begin
-      fAzimuth := WrapRot(0.785398185253143 + (((2*PI) / Rotations) * I));
+      fAzimuth := WrapRot(AAzimuth + (((2*PI) / Rotations) * I));
       SP := Analyse(AModel);
       if I = 0 then
         Res := SP
@@ -234,12 +262,13 @@ begin
           Res.Min := Vector3(Min(Res.Min.X, SP.Min.X),
                              Min(Res.Min.Y, SP.Min.Y),
                              Min(Res.Min.Z, SP.Min.Z));
-          Res.Max := Vector3(Min(Res.Max.X, SP.Max.X),
-                             Min(Res.Max.Y, SP.Max.Y),
-                             Min(Res.Max.Z, SP.Max.Z));
+          Res.Max := Vector3(Max(Res.Max.X, SP.Max.X),
+                             Max(Res.Max.Y, SP.Max.Y),
+                             Max(Res.Max.Z, SP.Max.Z));
         end;
       WriteLnLog('SP[' + IntToStr(I) + '] = ' + SP.Min.ToString + ' : ' + SP.Max.ToString);
     end;
+   WriteLnLog('SP[All] = ' + SP.Min.ToString + ' : ' + SP.Max.ToString);
     Res.Size := Vector3(Res.Max.X - Res.Min.X,
                         Res.Max.Y - Res.Min.Y,
                         Res.Max.Z - Res.Min.Z);
@@ -289,7 +318,7 @@ begin
       Res.Size := S;
       Res.Pan := P;
 
-//      WriteLnLog('NewSiz = ' + FloatToStr(S) + ' (' + E.Size.ToString + ')');
+      WriteLnLog('NewSiz = ' + FloatToStr(S) + ' (' + E.Size.ToString + ')');
       fCamera.Orthographic.Width := S; // FitViewToModel(fStage); // fZoomFactor2D;
       fCamera.Orthographic.Height := S; // 0;
       fCamera.ReCenter(P);
@@ -308,6 +337,9 @@ begin
       ViewportRect := Rectangle(0, 0, fWidth, fHeight);
       AContainer.RenderControl(fViewport,ViewportRect);
       Image.RenderToImageEnd;
+
+      if Assigned(fImageBuffer) then
+        FreeAndNil(fImageBuffer);
 
       try
         if fTransparent then
@@ -343,9 +375,11 @@ begin
   fCamera.ViewFromSphere(1, fAzimuth, fInclination);
   WriteLnLog('Azi = ' + FloatToStr(fAzimuth));
 
-  E := fViewport.FrameCalcAngles(AModel); // fStage);
+//  E := fViewport.FrameCalcAngles(AModel); // fStage);
+  E := fViewport.CalcAngles(AModel);
   S := Max(E.Size.X, E.Size.Y);
   P := Vector2((E.Size.X / 2) + E.Min.X, (E.Size.Y / 2) + E.Min.Y);
+  WriteLnLog('AnaSiz = ' + FloatToStr(S) + ' (' + E.Size.ToString + ')');
 
   Result.Min := E.Min;
   Result.Max := E.Max;

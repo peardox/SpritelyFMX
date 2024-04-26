@@ -192,6 +192,7 @@ uses
   System.DateUtils,
   System.IOUtils,
   CastleLog,
+  CastleFilesUtils,
   X3DNodes,
   CastleHelpers,
   CastleCameras,
@@ -253,6 +254,7 @@ begin
   MappedVal := fmod(-ArcDial1.Value + 360, 360);
   Label2.Text := FloatToStr(MappedVal);
   CastleApp.Azimuth := DegToRad(MappedVal);
+  ArcDial1.Frequency := 45;
 end;
 
 procedure TForm1.cbxProjectionsChange(Sender: TObject);
@@ -884,13 +886,25 @@ end;
 procedure TForm1.mnuSaveImageClick(Sender: TObject);
 var
   frame: TFrameExport;
+  SName: String;
+  SAP: TSizeAndPan;
+  Rotations: Integer;
+  I: Integer;
 begin
   if Assigned(CastleApp) then
     begin
+      Rotations := 1;
       frame := TFrameExport.Create(Self, 256, 256);
-      frame.GrabFromCastleApp(CastleApp);
-      frame.Save('../../test.png');
- //     frame.Clear;
+      SAP := frame.AnalyseModel(CastleApp.Stage, CastleApp.Azimuth, CastleApp.Inclination, Rotations);
+      SAP := Default(TSizeAndPan);
+      for I := 0 to Rotations - 1 do
+        begin
+          frame.GrabFromCastleApp(CastleApp, WrapRot(CastleApp.Azimuth + (((2*PI) / Rotations) * I)), CastleApp.Inclination, SAP, CastleApp.Stage);
+          SName := FileNameAutoInc('../../grab_%4.4d.png');
+          WriteLnLog('SAP = ' + FloatToStr(SAP.Size) + ' (' + FloatToStr(SAP.Pan.X) + ', ' + FloatToStr(SAP.Pan.Y) + ')');
+          frame.Save(Sname);
+        end;
+      frame.Clear;
       FreeAndNil(frame);
     end;
 end;
@@ -1459,7 +1473,7 @@ begin
   if Assigned(CastleApp) then
     begin
       frame := TFrameExport.Create(Self, 256, 256);
-      SAP := frame.AnalyseModel(mi.Model, Rotations, AniIndex, AniTime);
+      SAP := frame.AnalyseModel(mi.Model, CastleApp.Azimuth, CastleApp.Inclination, Rotations, AniIndex, AniTime);
       WriteLnLog('SAP = ' + FloatToStr(SAP.Size) + ' (' + FloatToStr(SAP.Pan.X) + ', ' + FloatToStr(SAP.Pan.Y) + ')');
       frame.Clear;
       FreeAndNil(frame);
